@@ -5,13 +5,14 @@
 1. a standard feed forward neural network to approximate the function $g$
 
 $$
-g(x,y,\mu) = u(T, x, y, \mu)
+g(x,y,\mu ) = u(T, x, y, \mu )
 $$
 
 2. an operator network (DeepONet) or Neural Operator to approximate the operator $\mathcal G$
-   $$
-    G(u_0)(x,y) = u(T,x,y)
-   $$
+
+$$
+G(u_0)(x,y) = u(T,x,y)
+$$
 
 ## Equation
 
@@ -20,9 +21,12 @@ $$
 #### PDE equation
 
 $$
-u_t = \nabla u\quad t \in[0,T],(x_1,x_2)\in[-1,1]^2,\mu\in[-1,1]^d
+u_t = \nabla u\quad t \in [0,T],(x_1,x_2)\in [-1,1]^2, \mu\in [-1,1]^d
 $$
-$\mu\sim Unif([-1,1]^d)$
+
+$$
+\mu\sim Unif([-1,1]^d)
+$$
 
 #### initial condition
 
@@ -32,7 +36,7 @@ $$
 #### boundary condition
 
 $$
-u(t,\{-1,1\},\{-1,1\},\mu) = 0
+u(t,\\\{-1,1\\\},\\\{-1,1\\\},\mu) = 0
 $$
 
 #### solution 
