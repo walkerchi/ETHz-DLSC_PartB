@@ -15,25 +15,43 @@ $$
 
 ## Equation
 
-heat equation
+### Heat  Equation
+
+#### PDE equation
+
 $$
 u_t = \nabla u\quad t \in[0,T],(x_1,x_2)\in[-1,1]^2,\mu\in[-1,1]^d
 $$
 $\mu\sim Unif([-1,1]^d)$
 
-initial condition
+#### initial condition
+
 $$
 u(0,x_1,x_2,\mu) = -\frac{1}{d}\sum_{m=1}^d  \mu_m sin(\pi m x_1)sin(\pi m x_2)/\sqrt m
 $$
-boundary condition
-
-zero Dirichlet boundary condition
-
-solution
-$$
-u(x,t) = \frac{1}{(4\pi)^{n/2}}\int_{R^2}e^{-\frac{|x-y|^2}{4}}\left(-\frac{1}{d}\sum_{m=1}^d \mu_m sin(\pi my_1)sin(\pi my_2)\right)dy
-$$
+#### boundary condition
 
 $$
-\int_{-1}^1e^{\frac{(x-y)^2}{4}} sin(\pi m y)dy
+u(t,\{-1,1\},\{-1,1\},\mu) = 0
 $$
+
+#### solution 
+
+$$
+u(t,x_1,x_2,\mu) = -\frac{1}{d}\sum_{m=1}^d \frac{\mu_m}{\sqrt{m}} e^{-2m^2\pi^2t} sin(\pi m  x_1)sin(\pi mx_2)
+$$
+
+### Wave Equation
+
+### Poisson Equation
+
+## Model
+
+### MLP
+
+### DeepONet
+
+### FNO
+
+### CNO
+
