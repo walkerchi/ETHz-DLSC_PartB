@@ -18,8 +18,6 @@ class  HeatEquation:
         Solution:
             u = - 1/ d \sum_{m=1}^d mu_m * exp(-2 * pi^2 * m^2 * t) * sin(pi * m * x1) * sin(pi * m * x2) / sqrt(m)
     """
-    input_dim  = 3 
-    output_dim = 1
 
     def __init__(self, d):
         self.d = d 
@@ -36,10 +34,10 @@ class  HeatEquation:
             --------
                 u: torch.Tensor, shape=(n,d)
         """
-   
+
         d = self.d 
         m = torch.arange(1, self.d+1).float()[None,:]
         u = -1 / d * (self.mu * torch.exp(-2 * m * m * PI2 * t) * torch.sin(PI * m * x1) * torch.sin(PI * m * x2) / torch.sqrt(m))
 
-        return u
+        return u.T
 

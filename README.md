@@ -53,9 +53,18 @@ $$
 
 ### MLP
 
+$$
+H^{l+1} = \sigmoid(W H^l + b)
+$$
+
 ### DeepONet
 
+$$
+
+$$
+
 ### FNO
+
 
 ### CNO
 
