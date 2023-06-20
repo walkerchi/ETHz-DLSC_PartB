@@ -82,19 +82,19 @@ $$
 
 ### Heat Equation FFN
 
-![img](.\images\ffn\heat_equation_prediction.png)
+![img](./images/ffn/heat_equation_prediction.png)
 
 ### Heat Equation DeepONet
 
-![img](.\images\deeponet\heat_equation_prediction.png)
+![img](./images/deeponet/heat_equation_prediction.png)
 
 ### Heat Equation FNO
 
-![img](.\images\fno\heat_equation_prediction.png)
+![img](./images/fno/heat_equation_prediction.png)
 
 ### Heat Equation CNO
 
-![img](.\images\cno\heat_equation_prediction.png)
+![img](./images/cno/heat_equation_prediction.png)
 
 ## Discussion
 
