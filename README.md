@@ -60,7 +60,9 @@ $$
 ### DeepONet
 
 $$
-\tilde u(T,x_1,x_2,\mu)_{jd} = \mathcal B\left([y_1,y_2,u(0,y_1,y_2,\mu)]\right)_{idh}\mathcal T([T,x_1,x_2])_{jdh}
+\tilde u( T, x_1, x_2, \mu )_{jd} = 
+\mathcal B \left( [ y_1, y_2, u ( 0, y_1, y_2, \mu ) ] \right) _ { idh } 
+\mathcal T (  [ T, x_1, x_2 ] ) _ { jdh }
 $$
 
 ### FNO
