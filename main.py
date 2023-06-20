@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from equations import HeatEquation
-from models import MLP, DeepONet, FNO2d
+from models import MLP, DeepONet, FNO2d, CNO2d
 
 def scatter(x, y, c, title, fig, ax):
     h = ax.scatter(x, y, c=c, cmap="jet")
@@ -65,8 +65,14 @@ def fit(model,
         lr = 1e-3,
         weight_decay=1e-4,
         eval_every_eps=100,
-        loss_image_path="images/heat_equation_loss.png"):
+        loss_image_path="images/heat_equation_loss.png",
+        device="cpu"):
     
+    model = model.to(device)
+    train_input  = train_input.to(device)
+    train_output = train_output.to(device)
+    valid_input  = valid_input.to(device)
+    valid_output = valid_output.to(device)
     losses = {
         "train":[],
         "valid":[]
@@ -130,6 +136,11 @@ def fit(model,
     fig.savefig(loss_image_path, dpi=400)
 
     model.eval()
+    model = model.cpu()
+    train_input  = train_input.cpu()
+    train_output = train_output.cpu()
+    valid_input  = valid_input.cpu()
+    valid_output = valid_output.cpu()
 
 
 def ffn_fit_heat_equation(d=1, T=1.0, n_train=1024, n_valid=1024):
@@ -293,7 +304,7 @@ def fno_fit_heat_equation(d=1, T=1.0, n_train=256, n_valid=1024):
     train_output, valid_output = normalizer(train_output), normalizer(valid_output)
 
     # build up model and training utils
-    model = FNO2d(input_size=2+d, output_size=d, hidden_size=32, num_layers=3)
+    model = FNO2d(in_channel=2+d, out_channel=d, hidden_channel=32, num_layers=3)
     fit(model,
         train_input, train_output,
         valid_input, valid_output,
@@ -320,6 +331,79 @@ def fno_fit_heat_equation(d=1, T=1.0, n_train=256, n_valid=1024):
     fig.savefig("images/fno/heat_equation_prediction.png", dpi=400)
 
 
+
+
+
+def cno_fit_heat_equation(d=1, T=1.0, n_train=256, n_valid=1024, device='cuda:0'):
+    """
+        G(u_0)(x,y) = u(T,x,y)
+    """
+    os.makedirs("images/cno", exist_ok=True)
+    os.makedirs("weights/cno", exist_ok=True)
+
+    equation = HeatEquation(d)
+
+    # input [1, 2+d, window_size, window_size] u0
+    # output [1, d, window_size, window_size] u(T, x1, x2)
+
+    n_train = int(math.sqrt(n_train))
+    n_valid = int(math.sqrt(n_valid))
+    train_x1, train_x2 = torch.meshgrid(torch.linspace(-1, 1, n_train), torch.linspace(-1, 1, n_train))
+    valid_x1, valid_x2 = torch.meshgrid(torch.linspace(-1, 1, n_valid), torch.linspace(-1, 1, n_valid))
+    train_points = torch.stack([train_x1, train_x2], 0)
+    valid_points = torch.stack([valid_x1, valid_x2], 0)
+    train_u0 = equation(0, train_x1.flatten(), train_x2.flatten()).reshape(n_train, n_train, equation.d).permute(2,0,1)
+    train_uT = equation(T, train_x1.flatten(), train_x2.flatten()).reshape(n_train, n_train, equation.d).permute(2,0,1)
+    valid_u0 = equation(0, valid_x1.flatten(), valid_x2.flatten()).reshape(n_valid, n_valid, equation.d).permute(2,0,1)
+    valid_uT = equation(T, valid_x1.flatten(), valid_x2.flatten()).reshape(n_valid, n_valid, equation.d).permute(2,0,1)
+    train_input = torch.cat([train_points,  train_u0], dim=0)[None,:]
+    valid_input = torch.cat([valid_points, valid_u0], dim=0)[None,:]
+    train_output = train_uT[None,:]
+    valid_output = valid_uT[None,:]
+    
+    # plot initial dataset
+    plot_dataset(train_points.T.reshape(-1,2), 
+                 train_uT.reshape(d, -1).T, 
+                 valid_points.T.reshape(-1,2), 
+                 valid_uT.reshape(d, -1).T, 
+                 d, 
+                 image_path="images/cno/heat_equation_data.png")
+
+    # do the normalization
+    normalizer = Normalizer(valid_output, axis=(-2,-1))
+    train_output, valid_output = normalizer(train_output), normalizer(valid_output)
+
+    # build up model and training utils
+    model = CNO2d(in_channel=2+d, out_channel=d)
+    fit(model,
+        train_input, train_output,
+        valid_input, valid_output,
+        epoch=10000,
+        lr = 1e-3,
+        weight_decay=1e-4,
+        eval_every_eps=100,
+        loss_image_path="images/cno/heat_equation_loss.png",
+        device=device)
+    
+    torch.save(model.state_dict(), "weights/cno/weight.pth")
+
+    # plot prediction
+    X, Y = torch.meshgrid(torch.linspace(-1, 1, 100), torch.linspace(-1, 1, 100))
+    u0 = equation(0, X.reshape(-1), Y.reshape(-1)).reshape(100,100,d).permute(2,0,1)
+    input = torch.cat([torch.stack([X,Y],0),  u0], dim=0)[None,...]
+    with torch.no_grad():
+        pred_uT = model(input)
+    pred_uT = normalizer.undo(pred_uT)[0].permute(1,2,0)
+    exact_uT = equation(T, X.reshape(-1), Y.reshape(-1)).reshape(100,100,d)
+    fig, ax = plt.subplots(1, 3, figsize=(15,5))
+    scatter(X.flatten(), Y.flatten(), pred_uT.reshape(-1,d).sum(-1), "Prediction", fig, ax[0])
+    scatter(X.flatten(), Y.flatten(), exact_uT.reshape(-1,d).sum(-1), "Exact", fig, ax[1])
+    scatter(X.flatten(), Y.flatten(), (pred_uT-exact_uT).reshape(-1,d).sum(-1), "Error", fig, ax[2])
+    fig.savefig("images/cno/heat_equation_prediction.png", dpi=400)
+
+
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--model", type=str, default="ffn", choices=["ffn", "deeponet", "fno","cno"])
@@ -333,6 +417,7 @@ if __name__ == '__main__':
         "ffn":ffn_fit_heat_equation,
         "deeponet":deeponet_fit_heat_equation,
         "fno":fno_fit_heat_equation,
+        "cno":cno_fit_heat_equation
     }[args.model](args.d, args.T, args.n_train, args.n_valid)
 
 
