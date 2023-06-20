@@ -6,13 +6,13 @@ import torch.nn.functional as F
 
 class SpectralConv2d(nn.Module):
     def __init__(self, 
-                 input_channel,
-                 output_channel):
+                 in_channel,
+                 out_channel):
         super().__init__()
-        self.weight_real = nn.Parameter(torch.randn(input_channel, output_channel))
-        self.weight_imag = nn.Parameter(torch.randn(input_channel, output_channel))
-        self.bias_real = nn.Parameter(torch.randn(output_channel))
-        self.bias_imag = nn.Parameter(torch.randn(output_channel))
+        self.weight_real = nn.Parameter(torch.randn(in_channel, out_channel))
+        self.weight_imag = nn.Parameter(torch.randn(in_channel, out_channel))
+        self.bias_real = nn.Parameter(torch.randn(out_channel))
+        self.bias_imag = nn.Parameter(torch.randn(out_channel))
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -68,9 +68,9 @@ class Activation(nn.Module):
 
 class FNO2d(nn.Module):
     def __init__(self,
-                 input_size,
-                 output_size,
-                 hidden_size,
+                 in_channel,
+                 out_channel,
+                 hidden_channel,
                  num_layers,
                  activation='relu'):
         super().__init__()
@@ -79,16 +79,16 @@ class FNO2d(nn.Module):
 
         self.input_transform = nn.Sequential(
             Permute(0, 2, 3, 1),
-            nn.Linear(input_size, hidden_size),
+            nn.Linear(in_channel, hidden_channel),
             Activation(activation),
             Permute(0, 3, 1, 2)
         )
         for _ in range(num_layers):
-            self.spectral_convs.append(SpectralConv2d(hidden_size, hidden_size))
-            self.spatial_convs.append(UnitConv2d(hidden_size, hidden_size))
+            self.spectral_convs.append(SpectralConv2d(hidden_channel, hidden_channel))
+            self.spatial_convs.append(UnitConv2d(hidden_channel, hidden_channel))
         self.output_transform = nn.Sequential(
             Permute(0, 2, 3, 1),
-            nn.Linear(hidden_size, output_size),
+            nn.Linear(hidden_channel, out_channel),
             Activation(activation),
             Permute(0, 3, 1, 2)
         )
