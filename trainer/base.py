@@ -9,8 +9,8 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader, TensorDataset
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from  models import FNO2d, CNO2d, UNet2d, KNO2d
-from equations import WaveEquation, HeatEquation
+from  models import FNO2d, CNO2d, UNet2d, KNO2d, ModelLookUp
+from equations import WaveEquation, HeatEquation, EquationLookUp, EquationKwargsLookUp
 
 def to_device(x,  device):
     if isinstance(x, torch.Tensor):
@@ -50,20 +50,8 @@ def scatter_error2d(x, y, prediction, exact, image_path, xlims):
 
 
 
-EquationLookUp = {
-    'heat':HeatEquation,
-    'wave':WaveEquation,
-}
-EquationKwargsLookUp = {
-    'heat':("d",),
-    'wave':("K",)
-}
-ModelLookUp = {
-        "fno":FNO2d,
-        "cno":CNO2d,
-        "unet":UNet2d,
-        "kno":KNO2d
-    }
+
+
 
 
 class SpatialSampler:
