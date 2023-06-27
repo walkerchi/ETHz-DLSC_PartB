@@ -1,0 +1,131 @@
+
+import torch 
+
+from models import FFN
+from .base import   SpatialSampler,\
+                    DatasetGeneratorBase,\
+                    NormalizerBase,\
+                    DataLoaderBase,\
+                    TrainerBase,\
+                    general_call,\
+                    EquationLookUp,\
+                    EquationKwargsLookUp
+                    
+class FFNDatasetGenerator(DatasetGeneratorBase):
+    def __init__(self, T, Equation, **kwargs):
+        self.T        = T
+        self.kwargs   = kwargs
+        self.Equation = Equation 
+
+    def __call__(self, n_sample, n_points, sampler="mesh"):
+        """
+            inputs [n_samples * n_points, 2+d] (x, y, mu)
+            outputs [n_samples * n_points, 1] u(T, x, y, mu)
+        """
+        inputs = []
+        outputs= []
+        points_sampler = SpatialSampler(self.Equation, sampler=sampler)
+        x_dim = self.Equation.x_domain.shape[0]
+
+        for _ in range(n_sample):
+            points   = points_sampler(n_points, flatten=True)
+            equation = self.Equation(**self.kwargs)
+            input    = torch.cat([points, equation.variable.flatten()[None,:].tile(points.shape[0],1)], -1) #[n_points, 2 + d]
+            output   = equation(self.T, *[points[:,i] for i in range(x_dim)])[:, None] # [n_points, 1]
+            inputs.append(input)
+            outputs.append(output)
+     
+        inputs  = torch.cat(inputs, dim=0)  # [n_samples * n_points, 2+d]
+        outputs = torch.cat(outputs, dim=0) # [n_samples * n_points, 1]
+       
+        return inputs, outputs
+    
+class FFNNormalizer(NormalizerBase):
+    def __init__(self, inputs_min, inputs_max, outputs_min, outputs_max):
+        self.inputs_min = inputs_min
+        self.inputs_max = inputs_max
+        self.outputs_min = outputs_min
+        self.outputs_max = outputs_max
+
+    @classmethod
+    def init(cls, inputs, outputs):
+        inputs_min = inputs.min(0).values[None, ...]
+        inputs_max = inputs.max(0).values[None,...]
+        outputs_min = outputs.min(0).values[None,...]
+        outputs_max = outputs.max(0).values[None,...]
+        return cls(inputs_min, inputs_max, outputs_min, outputs_max)
+
+    def __call__(self, inputs, outputs):
+        # normalize input
+        inputs = (inputs-self.inputs_min)/(self.inputs_max-self.inputs_min)
+        # normalize output
+        outputs = (outputs-self.outputs_min)/(self.outputs_max-self.outputs_min)
+        return inputs, outputs
+    
+    def norm_input(self, input):
+        return (input - self.inputs_min) / (self.inputs_max-self.inputs_min)
+    def unorm_output(self, output):
+        return output*(self.outputs_max-self.outputs_min)+self.outputs_min
+    def save(self, path):
+        torch.save({'inputs_min':self.inputs_min,'inputs_max':self.inputs_max,'outputs_min':self.outputs_min,'outputs_max':self.outputs_max}, path)
+    @classmethod
+    def load(cls, path):
+        data = torch.load(path)
+        inputs_min = data['inputs_min']
+        inputs_max = data['inputs_max']
+        outputs_min = data['outputs_min']
+        outputs_max = data['outputs_max']
+        return cls(inputs_min, inputs_max, outputs_min, outputs_max)
+    
+class FFNDataLoader(DataLoaderBase):
+    pass
+
+class FFNTrainer(TrainerBase):
+    """
+        g(x,y,\mu ) = u(T, x, y, \mu )
+    """
+    DataLoader = FFNDataLoader
+    Normalizer = FFNNormalizer
+    def __init__(self, config):
+        self.config = config
+        Equation = EquationLookUp[config.equation]
+        equation_kwargs = {k:config[k] for k in EquationKwargsLookUp[config.equation]}
+        self.xlims = Equation.x_domain
+
+        self.dataset_generator = FFNDatasetGenerator(config.T, Equation, **equation_kwargs)
+        self.model             = FFN(input_size=2+Equation.degree_of_freedom(**equation_kwargs), output_size=1, hidden_size=config.num_hidden, num_layers=config.num_layers, activation=config.activation)
+   
+        self.weight_path       = f"weights/{config.equation}_{'_'.join([f'{k}={v}' for k,v in equation_kwargs.items()])}/ffn"
+        self.image_path        = f"images/{config.equation}_{'_'.join([f'{k}={v}' for k,v in equation_kwargs.items()])}/ffn"
+    
+    def eval(self):
+        """
+            Returns:
+            --------
+                position:  torch.Tensor, shape=(n_eval_sample, n_eval_spatial, 2)
+                predictions: torch.Tensor, shape=(n_eval_sample, n_eval_spatial)
+                outputs: torch.Tensor, shape=(n_eval_sample, n_eval_spatial)
+
+        """
+        config            = self.config
+        x_dim             = self.xlims.shape[0]
+        dataset           = self.dataset_generator(config.n_eval_sample, config.n_eval_spatial, sampler=config.sampler) # input (x, y, ...mu), output
+        points            = dataset[0][:, :x_dim].reshape(config.n_eval_sample, config.n_eval_spatial, x_dim) # [n_eval_sample, n_eval_spatial, 2]
+        dataset           = self.normalizer(*dataset)
+        dataloader        = self.DataLoader(*dataset, batch_size=config.batch_size * config.n_eval_spatial, shuffle=True)
+
+        predictions = []
+        outputs     = []
+
+        with torch.no_grad():
+            for batch_input, batch_output in dataloader:           
+                prediction = general_call(self.model, batch_input) #[batch_size*n_eval_spatial, 1] 
+                prediction = self.normalizer.unorm_output(prediction).reshape([-1, config.n_eval_spatial]) # [batch_size, n_eval_spatial]
+                batch_output = self.normalizer.unorm_output(batch_output).reshape([-1, config.n_eval_spatial])
+                predictions.append(prediction)
+                outputs.append(batch_output)
+
+        predictions = torch.cat(predictions, dim=0) # [n_eval_sample, n_eval_spatial]
+        outputs     = torch.cat(outputs, dim=0) # [n_eval_sample, n_eval_spatial]
+
+        return points, predictions, outputs

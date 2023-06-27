@@ -1,0 +1,27 @@
+# for task
+task           = "train"
+
+# for model
+model          = "fno"
+num_hidden     = 64
+num_layers     = 4
+activation     = "relu"
+
+# for equation
+equation       = "wave"
+K              = 1      # source component dimension
+T              = 1.0    # prediction time
+
+# for training
+epoch          = 1000
+sampler        = "sobol"
+batch_size     = 64
+n_train_sample = 64     # how many mu to sample for training
+n_valid_sample = 64
+n_eval_sample  = 64
+n_train_spatial = 256   # how many spatial points to sample for training
+n_valid_spatial = 1024
+n_eval_spatial  = 10000
+
+# for device
+cuda            = true # use CPU
