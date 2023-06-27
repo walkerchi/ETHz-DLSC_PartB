@@ -1,7 +1,7 @@
 import os
 import torch 
 
-from models import FNO2d,CNO2d,UNet2d,KNO2d
+from models import FNO2d,CNO2d,UNet2d,KNO2d, ModelLookUp
 from .base import   SpatialSampler,\
                     DatasetGeneratorBase,\
                     NormalizerBase,\
@@ -12,12 +12,6 @@ from .base import   SpatialSampler,\
                     EquationLookUp,\
                     EquationKwargsLookUp
 
-ModelLookUp = {
-        "fno":FNO2d,
-        "cno":CNO2d,
-        "unet":UNet2d,
-        "kno":KNO2d
-    }
 
 class MeshNeuralOperatorDatasetGenerator(DatasetGeneratorBase):
     def __init__(self, T, Equation, **kwargs):
@@ -99,7 +93,7 @@ class MeshNeuralOperatorDataLoader(DataLoaderBase):
 
 class MeshNeuralOperatorTrainer(TrainerBase):
     """
-        G(u0)(x1,x2)
+        G(u0,x1,x2)
     """
     DataLoader = MeshNeuralOperatorDataLoader
     Normalizer = MeshNeuralOperatorNormalizer
