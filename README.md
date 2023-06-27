@@ -92,21 +92,116 @@ $$
 
 ## Result
 
-### Heat Equation FFN
+### Heat Equation Prediction
 
-![img](./images/ffn/heat_equation_prediction.png)
+$d=1$ and $T=1$
 
-### Heat Equation DeepONet
+#### FFN
 
-![img](./images/deeponet/heat_equation_prediction.png)
+![img](./images/heat_d=1/ffn/prediction.png)
 
-### Heat Equation FNO
+#### DeepONet
 
-![img](./images/fno/heat_equation_prediction.png)
+![img](./images/heat_d=1/deeponet/prediction.png)
 
-### Heat Equation CNO
+#### FNO
 
-![img](./images/cno/heat_equation_prediction.png)
+![img](./images/heat_d=1/fno/prediction.png)
+
+#### CNO
+
+![img](./images/heat_d=1/cno/prediction.png)
+
+#### UNet
+
+![img](./images/heat_d=1/unet/prediction.png)
+
+#### KNO
+
+![img](./images/heat_d=1/kno/prediction.png)
+
+
+### Heat Equation Varying d
+
+#### FFN
+
+![img](./images/heat_d=1/ffn/varying.png)
+
+#### DeepONet
+
+![img](./images/heat_d=1/deeponet/varying.png)
+
+#### FNO
+
+![img](./images/heat_d=1/fno/varying.png)
+
+#### CNO
+
+![img](./images/heat_d=1/cno/varying.png)
+
+#### UNet
+
+![img](./images/heat_d=1/unet/varying.png)
+
+#### KNO
+
+![img](./images/heat_d=1/kno/varying.png)
+
+
+### Wave Equation Prediction
+
+$K=1$ and $T=1$
+
+#### FFN
+
+![img](./images/wave_K=1/ffn/prediction.png)
+
+#### DeepONet
+
+![img](./images/wave_K=1/deeponet/prediction.png)
+
+#### FNO
+
+![img](./images/wave_K=1/fno/prediction.png)
+
+#### CNO
+
+![img](./images/wave_K=1/cno/prediction.png)
+
+#### UNet
+
+![img](./images/wave_K=1/unet/prediction.png)
+
+#### KNO
+
+![img](./images/wave_K=1/kno/prediction.png)
+
+
+### Wave Equation Varying d
+
+#### FFN
+
+![img](./images/wave_K=1/ffn/varying.png)
+
+#### DeepONet
+
+![img](./images/wave_K=1/deeponet/varying.png)
+
+#### FNO
+
+![img](./images/wave_K=1/fno/varying.png)
+
+#### CNO
+
+![img](./images/wave_K=1/cno/varying.png)
+
+#### UNet
+
+![img](./images/wave_K=1/unet/varying.png)
+
+#### KNO
+
+![img](./images/wave_K=1/kno/varying.png)
 
 ## Discussion
 
