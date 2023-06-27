@@ -1,27 +1,47 @@
 ## Equations
 ### Heat Equation
-- [ ] solve the heat equation
-- [ ] validate the solution to the heat equation
+- [x] solve the heat equation
+- [x] validate the solution to the heat equation
 ### Wave Equation
-- [ ] solve the wave equation under customized initial/boundary condition
+- [x] solve the wave equation under customized initial/boundary condition
 - [ ] validate the solution to the wave equation 
 ### Poisson Equation
 - [ ] solve the poisson equation under customized initial/boundary condition
 - [ ] validate the solution to the poisson equation 
 ## Implementation
-### MLP
-- [ ] implement MLP
-- [ ] implement dataset generation for MLP
-- [ ] train MLP, save and plot  the result
+### FFN
+- [x] implement FFN
+- [x] implement dataset generation for FFN
+- [x] train FFN, save weight and plot prediction
+- [ ] optimize the train configuration for FFN
+- [ ] plot varying d/K plot for FFN
 ### DeepONet
-- [ ] implement DeepONet
-- [ ] implement dataset generation for DeepONet
-- [ ] train DeepONet, save and plot result
+- [x] implement DeepONet
+- [x] implement dataset generation for DeepONet
+- [x] train DeepONet, save weight and plot prediction
+- [ ] optimize the train configuration for DeepONet
+- [ ] plot varying d/K plot for DeepONet
 ### FNO
-- [ ]  implement FNO
-- [ ]  implement dataset generation for FNO
-- [ ]  train FNO, save and plot result
+- [x]  implement FNO
+- [x]  implement dataset generation for FNO
+- [x]  train FNO, save weight and plot prediction
+- [ ]  optimize the train configuration for FNO
+- [ ]  plot varying d/K plot for FNO
 ### CNO
-- [ ]  implement CNO
-- [ ]  implement dataset generation for CNO
-- [ ]  train FNO, save and plot result
+- [x]  implement CNO
+- [x]  implement dataset generation for CNO
+- [x]  train CNO, save weight and plot prediction
+- [ ]  optimize the train configuration for CNO
+- [ ]  plot varying d/K plot for CNO
+### UNet
+- [x]  implement UNet
+- [x]  implement dataset generation for UNet
+- [x]  train UNet, save weight and plot prediction
+- [ ]  optimize the train configuration for UNet
+- [ ]  plot varying d/K plot for UNet
+### KNO
+- [x]  implement KNO
+- [x]  implement dataset generation for KNO
+- [x]  train KNO, save weight and plot prediction
+- [ ]  optimize the train configuration for KNO
+- [ ]  plot varying d/K plot for KNO

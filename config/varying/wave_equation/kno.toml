@@ -1,0 +1,21 @@
+# for task
+task           = "varying"
+
+# for model should retain the same as the saved weight
+model          = "kno"
+num_hidden     = 64
+num_layers     = 4
+activation     = "relu"
+
+# for equation
+equation       = "wave"
+T              = 1.0    # prediction time
+
+# for evaluation
+sampler        = "sobol"
+batch_size     = 16
+n_eval_sample  = 16
+n_eval_spatial = 16284
+
+# for device
+cuda            = true # use CPU

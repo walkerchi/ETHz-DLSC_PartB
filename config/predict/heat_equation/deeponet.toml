@@ -1,0 +1,24 @@
+# for task
+task           = "predict"
+
+# for model
+model          = "deeponet"
+num_hidden     = 64
+num_layers     = 4
+activation     = "relu"
+branch_arch    = "mlp"
+trunk_arch     = "mlp"
+branch_sampler = "sobol" # when the branch is a mlp, this could be any sampler ("mesh","sobol","uniform")
+trunk_sampler  = "sobol"
+
+# for equation
+equation       = "heat"
+d              = 1      # source component dimension
+T              = 1.0    # prediction time
+
+# for evaluation
+sampler        = "sobol"
+n_eval_spatial  = 10000
+
+# for device
+cuda            = true # use CPU

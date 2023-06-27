@@ -113,5 +113,9 @@ $$
    4. arguments control
 4. result display
    1. what content we should display
+      1. $d$ - error for different model distribution
+      2. parameter sensitivity, parameter(sample density/sample engine) -  error (customize)
+      3. NN architecture
+      4. NN prediction - error
    2. seperate them into groups
 5. possible our new operator?
