@@ -4,6 +4,12 @@
 
 The default configuration is inside the `add_arguments` function inside ``config.py`
 
+### prerequisite
+
+1. if you are using windows,
+   install visual studio to default location
+2. download the ninja and add it to path
+
 ### run with single configuration file
 
 the file and be `toml/json/yaml` file
@@ -13,7 +19,7 @@ you simply give it after the argument of `run_file.py`
 for example, if you want to train the deeponet on heat equation
 
 ```bash
-python run_file.py -c config/train/heat_equation/deeponet.toml
+python run_file.py -c config/train/heat_d=1/deeponet.toml
 ```
 
 ### run with command line

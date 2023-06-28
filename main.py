@@ -15,8 +15,10 @@ if __name__ == '__main__':
     if config.task == "train":
         trainer.fit()
         trainer.save()
+        trainer.plot_prediction(config.n_eval_spatial)
     elif config.task == "predict":
         trainer.load()
+        trainer.model = trainer.model.to(config.device)
         trainer.plot_prediction(config.n_eval_spatial)
     elif config.task == "varying":
         trainer.load()

@@ -8,6 +8,7 @@ from .base import   SpatialSampler,\
                     TrainerBase,\
                     general_call,\
                     scatter_error2d,\
+                    to_device,\
                     EquationLookUp,\
                     EquationKwargsLookUp
 
@@ -100,20 +101,23 @@ class DeepONetNormalizer(NormalizerBase):
         return cls(branch_min, branch_max, trunk_min, trunk_max, output_min, output_max)
     
     def __call__(self, branch, trunk, output):
+        branch_min, branch_max, trunk_min, trunk_max, output_min, output_max = to_device([self.branch_min, self.branch_max, self.trunk_min, self.trunk_max, self.output_min, self.output_max], branch.device)
         # normalize input
-        branch = (branch-self.branch_min)/(self.branch_max-self.branch_min)
-        trunk  = (trunk-self.trunk_min)/(self.trunk_max-self.trunk_min)
+        branch = (branch-branch_min)/(branch_max-branch_min)
+        trunk  = (trunk-trunk_min)/(trunk_max-trunk_min)
         # normalize output
-        output = (output-self.output_min)/(self.output_max-self.output_min)
+        output = (output-output_min)/(output_max-output_min)
         return branch, trunk, output
     
     def norm_input(self, branch, trunk):
-        branch = (branch-self.branch_min)/(self.branch_max-self.branch_min)
-        trunk  = (trunk-self.trunk_min)/(self.trunk_max-self.trunk_min)
+        branch_min, branch_max, trunk_min, trunk_max = to_device([self.branch_min, self.branch_max, self.trunk_min, self.trunk_max], branch.device)
+        branch = (branch-branch_min)/(branch_max-branch_min)
+        trunk  = (trunk-trunk_min)/(trunk_max-trunk_min)
         return branch, trunk
     
     def unorm_output(self, output):
-        return output*(self.output_max-self.output_min)+self.output_min
+        output_min, output_max = to_device([self.output_min, self.output_max], output.device)
+        return output*(output_max-output_min)+output_min
     
     def save(self, path):
         torch.save({'branch_min':self.branch_min,'branch_max':self.branch_max,'trunk_min':self.trunk_min,'trunk_max':self.trunk_max,'output_min':self.output_min,'output_max':self.output_max}, path)
@@ -172,9 +176,10 @@ class DeepONetTrainer(TrainerBase):
         else:                # [n_eval_spatial, 2]
             points = trunk
         input = self.normalizer.norm_input(branch, trunk)
+        input = to_device(input, self.config.device)
         with torch.no_grad():
             prediction = self.model(*input)
-        prediction = self.normalizer.unorm_output(prediction)
+        prediction = self.normalizer.unorm_output(prediction).cpu()
         if prediction.dim() == 3: #[1, H, W]
             prediction = prediction.flatten() #[H*W]
             output     = output.flatten()     #[H*W]
@@ -202,15 +207,16 @@ class DeepONetTrainer(TrainerBase):
         outputs     = []
 
         with torch.no_grad():
-            for batch_input, batch_output in dataloader:           
+            for batch_input, batch_output in dataloader:    
+                batch_input, batch_output = to_device(batch_input, batch_output, config.device)       
                 prediction = general_call(self.model, batch_input) #[batch_size, n_eval_spatial] or [batch_size, H, W] 
                 prediction = self.normalizer.unorm_output(prediction)
                 batch_output = self.normalizer.unorm_output(batch_output)
                 if prediction.dim() == 3: #[batch_size, H, W]
                     prediction = prediction.reshape([-1, config.n_eval_spatial])
                     batch_output = batch_output.reshape([-1, config.n_eval_spatial])
-                predictions.append(prediction)
-                outputs.append(batch_output)
+                predictions.append(prediction.cpu())
+                outputs.append(batch_output.cpu())
 
         predictions = torch.cat(predictions, 0) #[n_eval_sample, n_eval_spatial]
         outputs     = torch.cat(outputs, 0)     #[n_eval_sample, n_eval_spatial]                

@@ -250,9 +250,6 @@ class TrainerBase:
         # plot loss
         self.plot_loss(losses['train'], losses['valid'], best_epoch, best_loss)
 
-        # plot prediction
-        self.plot_prediction(config.n_eval_spatial)
-
         self.model = model
     
     def eval(self):
@@ -282,9 +279,10 @@ class TrainerBase:
         input, output = self.dataset_generator(1, n_eval_spatial, sampler="mesh")
         points = input[:, :2]
         input = self.normalizer.norm_input(input)
+        input = to_device(input, self.config.device)
         with torch.no_grad():
             prediction = self.model(input)
-        prediction = self.normalizer.unorm_output(prediction)
+        prediction = self.normalizer.unorm_output(prediction).cpu()
 
         scatter_error2d(points[:,0], points[:,1], prediction, output, os.path.join(self.image_path, "prediction.png"), self.xlims)
 

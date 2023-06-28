@@ -1,0 +1,20 @@
+# for task
+task           = "predict"
+
+# for model
+model          = "cno"
+num_hidden     = 64
+num_layers     = 4
+activation     = "relu"
+
+# for equation
+equation       = "wave"
+K              = 2      # source component dimension
+T              = 1.0    # prediction time
+
+# for evaluation
+sampler        = "sobol"
+n_eval_spatial  = 10000
+
+# for device
+cuda            = true # use CPU

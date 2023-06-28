@@ -9,6 +9,7 @@ from .base import   SpatialSampler,\
                     TrainerBase,\
                     general_call,\
                     scatter_error2d,\
+                    to_device,\
                     EquationLookUp,\
                     EquationKwargsLookUp
 
@@ -64,17 +65,20 @@ class MeshNeuralOperatorNormalizer:
         return cls(inputs_min, inputs_max, outputs_min, outputs_max)
     
     def __call__(self, inputs, outputs):
+        inputs_min, inputs_max, outputs_min, outputs_max = to_device([self.inputs_min, self.inputs_max, self.outputs_min, self.outputs_max],inputs.device)
         # normalize input
-        inputs = (inputs-self.inputs_min)/(self.inputs_max-self.inputs_min)
+        inputs = (inputs-inputs_min)/(inputs_max-inputs_min)
         # normalize output
-        outputs = (outputs-self.outputs_min)/(self.outputs_max-self.outputs_min)
+        outputs = (outputs-outputs_min)/(outputs_max-outputs_min)
         return inputs, outputs
     
     def norm_input(self, input):
-        return (input - self.inputs_min) / (self.inputs_max-self.inputs_min)
+        inputs_min, inputs_max = to_device([self.inputs_min, self.inputs_max],input.device)
+        return (input - inputs_min) / (inputs_max-inputs_min)
     
     def unorm_output(self, output):
-        return output*(self.outputs_max-self.outputs_min)+self.outputs_min
+        outputs_min, outputs_max = to_device([self.outputs_min, self.outputs_max],output.device)
+        return output*(outputs_max-outputs_min)+outputs_min
     
     def save(self, path):
         torch.save({'inputs_min':self.inputs_min,'inputs_max':self.inputs_max,'outputs_min':self.outputs_min,'outputs_max':self.outputs_max}, path)
@@ -133,14 +137,15 @@ class MeshNeuralOperatorTrainer(TrainerBase):
         outputs     = []
 
         with torch.no_grad():
-            for batch_input, batch_output in dataloader:           
+            for batch_input, batch_output in dataloader:  
+                batch_input, batch_output = to_device(batch_input, batch_output, config.device)         
                 prediction   = general_call(self.model, batch_input) #[batch_size, 1, H, W] 
                 prediction   = self.normalizer.unorm_output(prediction)
                 batch_output = self.normalizer.unorm_output(batch_output)
                 prediction   = prediction.reshape([-1, config.n_eval_spatial]) # [batch_size, n_eval_spatial]
                 batch_output = batch_output.reshape([-1, config.n_eval_spatial])
-                predictions.append(prediction)
-                outputs.append(batch_output)
+                predictions.append(prediction.cpu())
+                outputs.append(batch_output.cpu())
 
         predictions = torch.cat(predictions, dim=0) # [n_eval_sample, n_eval_spatial]
         outputs     = torch.cat(outputs, dim=0)     # [n_eval_sample, n_eval_spatial]
@@ -153,10 +158,11 @@ class MeshNeuralOperatorTrainer(TrainerBase):
         points = input[0, :2] # [2, H, W]
         points = points.reshape(2,-1)
         input = self.normalizer.norm_input(input)
+        input = to_device(input, self.config.device)
         with torch.no_grad():
             prediction = self.model(input)
         prediction = self.normalizer.unorm_output(prediction) # [1, 1, H, W]
-        prediction = prediction.flatten() # [H*W]
+        prediction = prediction.cpu().flatten() # [H*W]
         output     = output.flatten()     # [H*W]
 
         scatter_error2d(points[0], points[1], prediction, output, os.path.join(self.image_path, "prediction.png"), xlims=self.xlims)
