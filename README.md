@@ -7,8 +7,8 @@ The default configuration is inside the `add_arguments` function inside ``config
 ### prerequisite
 
 1. if you are using windows,
-   install visual studio to default location
-2. download the ninja and add it to path
+   install `visual studio` to default location
+2. download the `ninja` and add it to path
 
 ### run with single configuration file
 
