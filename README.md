@@ -10,6 +10,28 @@ The default configuration is inside the `add_arguments` function inside ``config
    install `visual studio` to default location
 2. download the `ninja` and add it to path
 
+
+### generate your own configuration
+by running the command below, it will generate folders of toml file based on the marco in `config.py`
+and the availability of GPU and the memory you passed.
+```bash
+python gen_config.py
+```
+
+If you are using a  GPU with memory of 8GB,  you could  run
+```bash
+python gen_config.py --memory 8
+```
+
+By default the memory is set to 2GB.
+
+### run all the training files
+by running this command, it will run recursively all the configuration file under the config folder
+
+```bash
+python run_folder.py config
+```
+
 ### run with single configuration file
 
 the file and be `toml/json/yaml` file
@@ -19,7 +41,7 @@ you simply give it after the argument of `run_file.py`
 for example, if you want to train the deeponet on heat equation
 
 ```bash
-python run_file.py -c config/train/heat_d=1/deeponet.toml
+python run_file.py config/train/heat_d=1/deeponet.toml
 ```
 
 ### run with command line

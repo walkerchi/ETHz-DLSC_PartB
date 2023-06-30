@@ -1,8 +1,10 @@
 import os 
 import torch
 import toml
+import argparse
 from itertools import product
 from tqdm import tqdm
+
 
 from config import EQUATIONS, EQUATION_T, EQUATION_KEYS, EQUATION_VALUES, MODELS
 
@@ -143,4 +145,10 @@ def gen_config(batch_size=64):
     gen_varying_config(batch_size=batch_size)
 
 if __name__ == '__main__':
-    gen_config()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-m","--memory", default=2, type=int, help="memory size in GB")
+    parser.add_argument("-b","--batch_size", default=None, type=int, help="batch size")
+    args = parser.parse_args()
+    if args.batch_size is None:
+        args.batch_size = int(32 * args.memory)
+    gen_config(args.batch_size)
