@@ -1,0 +1,29 @@
+
+# for task
+task           = "train"
+    
+# for model 
+model          = "cno"
+num_hidden     = 64
+num_layers     = 4
+activation     = "relu"
+    
+# for equation
+equation       = "heat"
+d              = 4      # source component dimension
+T              = 0.005    # prediction time
+    
+# for training
+epoch          = 1000
+sampler        = "mesh"
+batch_size     = 16
+n_train_sample = 64     # how many mu to sample for training
+n_valid_sample = 64
+n_eval_sample  = 64
+n_train_spatial = 4096   # how many spatial points to sample for training
+n_valid_spatial = 4096
+n_eval_spatial  = 4096
+    
+# for device
+cuda            = true # use CPU
+    

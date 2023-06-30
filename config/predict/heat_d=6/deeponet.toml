@@ -1,0 +1,22 @@
+
+# for task
+task           = "predict"
+    
+# for model 
+model          = "deeponet"
+num_hidden     = 64
+num_layers     = 4
+activation     = "relu"
+    
+# for equation
+equation       = "heat"
+d              = 6      # source component dimension
+T              = 0.005    # prediction time
+    
+# for evaluation
+sampler        = "mesh"
+n_eval_spatial = 4096    
+
+# for device
+cuda            = true # use CPU
+    

@@ -119,6 +119,12 @@ $$
 ![img](./images/other/unet.png)
 
 
+### KNO
+
+$$
+
+$$
+
 
 ## Result
 
@@ -128,27 +134,27 @@ $d=1$ and $T=1$
 
 #### FFN
 
-![img](./images/heat_d=1/ffn/prediction.png)
+![img](./images/heat_d=1/ffn/comparison.png)
 
 #### DeepONet
 
-![img](./images/heat_d=1/deeponet/prediction.png)
+![img](./images/heat_d=1/deeponet/comparison.png)
 
 #### FNO
 
-![img](./images/heat_d=1/fno/prediction.png)
+![img](./images/heat_d=1/fno/comparison.png)
 
 #### CNO
 
-![img](./images/heat_d=1/cno/prediction.png)
+![img](./images/heat_d=1/cno/comparison.png)
 
 #### UNet
 
-![img](./images/heat_d=1/unet/prediction.png)
+![img](./images/heat_d=1/unet/comparison.png)
 
 #### KNO
 
-![img](./images/heat_d=1/kno/prediction.png)
+![img](./images/heat_d=1/kno/comparison.png)
 
 
 ### Heat Equation Varying d
@@ -184,27 +190,27 @@ $K=1$ and $T=1$
 
 #### FFN
 
-![img](./images/wave_K=1/ffn/prediction.png)
+![img](./images/wave_K=1/ffn/comparison.png)
 
 #### DeepONet
 
-![img](./images/wave_K=1/deeponet/prediction.png)
+![img](./images/wave_K=1/deeponet/comparison.png)
 
 #### FNO
 
-![img](./images/wave_K=1/fno/prediction.png)
+![img](./images/wave_K=1/fno/comparison.png)
 
 #### CNO
 
-![img](./images/wave_K=1/cno/prediction.png)
+![img](./images/wave_K=1/cno/comparison.png)
 
 #### UNet
 
-![img](./images/wave_K=1/unet/prediction.png)
+![img](./images/wave_K=1/unet/comparison.png)
 
 #### KNO
 
-![img](./images/wave_K=1/kno/prediction.png)
+![img](./images/wave_K=1/kno/comparison.png)
 
 
 ### Wave Equation Varying d

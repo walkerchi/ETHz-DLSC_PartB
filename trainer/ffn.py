@@ -8,6 +8,7 @@ from .base import   SpatialSampler,\
                     DataLoaderBase,\
                     TrainerBase,\
                     general_call,\
+                    scatter_error2d,\
                     to_device,\
                     EquationLookUp,\
                     EquationKwargsLookUp
@@ -134,3 +135,16 @@ class FFNTrainer(TrainerBase):
         outputs     = torch.cat(outputs, dim=0) # [n_eval_sample, n_eval_spatial]
 
         return points, predictions, outputs
+
+    def plot_prediction(self, n_eval_spatial):
+        self.to(self.config.device)
+
+        input, output = self.dataset_generator(1, n_eval_spatial, sampler="mesh")
+        points = input[:, :2]
+        input = self.normalizer.norm_input(input)
+        input = to_device(input, self.config.device)
+        with torch.no_grad():
+            prediction = self.model(input)
+        prediction = self.normalizer.unorm_output(prediction).cpu()
+
+        scatter_error2d(points[:,0], points[:,1], prediction, output, self.image_path, self.xlims, input=input[:,-1].cpu())

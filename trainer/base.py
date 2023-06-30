@@ -30,8 +30,8 @@ def general_call(func, args):
     else:
         return func(args)
 
-def scatter(x, y, c, title, fig, ax, xlims):
-    h = ax.scatter(x, y, c=c, cmap="jet")
+def scatter(x, y, c, title, fig, ax, xlims, cmap="jet"):
+    h = ax.scatter(x, y, c=c, cmap=cmap)
     divider = make_axes_locatable(ax)
     cax = divider.append_axes('right', size='5%', pad=0.05)
     fig.colorbar(h, cax=cax, orientation='vertical')
@@ -41,16 +41,33 @@ def scatter(x, y, c, title, fig, ax, xlims):
     ax.set_ylabel("$x_2$")
     ax.set_title(title)
 
-def scatter_error2d(x, y, prediction, exact, image_path, xlims):
+def scatter_error2d(x, y, prediction, exact, image_path, xlims, **kwrags):
     fig, ax = plt.subplots(1, 3, figsize=(15,5))
     scatter(x, y, prediction.flatten(), "Prediction", fig, ax[0], xlims)
     scatter(x, y, exact.flatten(), "Exact", fig, ax[1], xlims)
     scatter(x, y, (prediction-exact).flatten(), "Error", fig, ax[2], xlims)
-    fig.savefig(image_path, dpi=400)
+    fig.savefig(os.path.join(image_path, "comparison.png"), dpi=400)
 
+    fig, ax = plt.subplots(figsize=(6, 6))
+    scatter(x, y, prediction.flatten(), "Prediction", fig, ax, xlims)
+    fig.savefig(os.path.join(image_path, "prediction.png"), dpi=400)
+    fig.savefig(os.path.join(image_path, "prediction.pdf"), dpi=400)
 
+    fig, ax = plt.subplots(figsize=(6, 6))
+    scatter(x, y, exact.flatten(), "Exact", fig, ax, xlims)
+    fig.savefig(os.path.join(image_path, "uT.png"), dpi=400)
+    fig.savefig(os.path.join(image_path, "uT.pdf"), dpi=400)
 
+    fig, ax = plt.subplots(figsize=(6, 6))
+    scatter(x, y, (prediction - exact).flatten(), "Error", fig, ax, xlims, cmap="seismic")
+    fig.savefig(os.path.join(image_path, "error.png"), dpi=400)
+    fig.savefig(os.path.join(image_path, "error.pdf"), dpi=400)
 
+    for k,v in kwrags.items():
+        fig, ax = plt.subplots(figsize=(6, 6))
+        scatter(x, y, v.flatten(), k, fig, ax, xlims)
+        fig.savefig(os.path.join(image_path, f"{k}.png"), dpi=400)
+        fig.savefig(os.path.join(image_path, f"{k}.pdf"), dpi=400)
 
 
 
@@ -274,38 +291,34 @@ class TrainerBase:
         ax.legend()
         fig.savefig(os.path.join(self.image_path, "loss.png"), dpi=400)
         
-    def plot_prediction(self, n_eval_spatial):
-
-        input, output = self.dataset_generator(1, n_eval_spatial, sampler="mesh")
-        points = input[:, :2]
-        input = self.normalizer.norm_input(input)
-        input = to_device(input, self.config.device)
-        with torch.no_grad():
-            prediction = self.model(input)
-        prediction = self.normalizer.unorm_output(prediction).cpu()
-
-        scatter_error2d(points[:,0], points[:,1], prediction, output, os.path.join(self.image_path, "prediction.png"), self.xlims)
-
-    def plot_varying(self):
+    def plot_varying(self, eval_results, **kwargs):
+        """
+            eval_results: list of (position, prediction, output)
+            kwargs: {varying_key: varying_values}
+        """
         sns.set_theme()
-        varying_key = EquationKwargsLookUp[self.config.equation][0]
-        df          = {varying_key:[], "relative error":[], "l2 error":[]}
-        for value in tqdm(range(1, 11)):
-            self.config[varying_key] = value
-            position, prediction, output = self.eval()
+        df = {}
+        assert len(kwargs) == 1
+        k, vs = list(kwargs.items())[0]
+        for v, (position, prediction, output) in zip(vs,eval_results):
             prediction = prediction.numpy()
             output     = output.numpy()
-            df[varying_key].append(np.full([len(prediction)], value))
+            df[k].append(np.full([len(prediction)], v))
             df["relative error"].append((np.abs(prediction-output)/np.abs(output)).mean(-1))
             df["l2 error"].append(np.sqrt(np.mean(np.square(prediction-output), -1)))
         for k, v in df.items():
             df[k] = np.concatenate(v)
         df = pd.DataFrame.from_dict(df)
         fig, ax = plt.subplots(figsize=(12,8))
-        sns.stripplot(x=varying_key, y="l2 error", data=df, 
+        sns.stripplot(x=k, y="l2 error", data=df, 
                    alpha=0.1,marker="D", linewidth=1, ax=ax)
-        sns.lineplot(x=varying_key, y="l2 error", data=df, ax=ax)
-        fig.savefig(os.path.join(self.image_path, "varying.png"), dpi=400)
+        sns.lineplot(x=k, y="l2 error", data=df, ax=ax)
+        path = f"images/{self.config.equation}_varying"
+        fig.savefig(os.path.join(path, f"{self.config.model}.png"), dpi=400)
+        fig.savefig(os.path.join(path, f"{self.config.model}.pdf"), dpi=400)
+
+    def plot_prediction(self):
+        raise NotImplementedError()
 
     def save(self):
         self.normalizer.save(os.path.join(self.weight_path, "normalizer.pth"))

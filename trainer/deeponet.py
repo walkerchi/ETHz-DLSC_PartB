@@ -168,24 +168,6 @@ class DeepONetTrainer(TrainerBase):
         self.weight_path       = f"weights/{config.equation}_{'_'.join([f'{k}={v}' for k,v in equation_kwargs.items()])}/deeponet"
         self.image_path        = f"images/{config.equation}_{'_'.join([f'{k}={v}' for k,v in equation_kwargs.items()])}/deeponet"
 
-    def plot_prediction(self, n_eval_spatial):
-
-        branch, trunk, output = self.dataset_generator(1, n_eval_spatial) # branch, trunk, output
-        if trunk.dim() == 3: # [2, H, W]
-            points = trunk.reshape([2, -1]).T # [n_eval_spatial, 2]
-        else:                # [n_eval_spatial, 2]
-            points = trunk
-        input = self.normalizer.norm_input(branch, trunk)
-        input = to_device(input, self.config.device)
-        with torch.no_grad():
-            prediction = self.model(*input)
-        prediction = self.normalizer.unorm_output(prediction).cpu()
-        if prediction.dim() == 3: #[1, H, W]
-            prediction = prediction.flatten() #[H*W]
-            output     = output.flatten()     #[H*W]
-
-        scatter_error2d(points[:,0], points[:,1], prediction, output, os.path.join(self.image_path, "prediction.png"), xlims=self.xlims)
-
     def eval(self):
         """
             Returns:
@@ -222,3 +204,23 @@ class DeepONetTrainer(TrainerBase):
         outputs     = torch.cat(outputs, 0)     #[n_eval_sample, n_eval_spatial]                
 
         return points, predictions, outputs
+    
+    def plot_prediction(self, n_eval_spatial):
+        self.to(self.config.device)
+
+        branch, trunk, output = self.dataset_generator(1, n_eval_spatial) # branch, trunk, output
+        if trunk.dim() == 3: # [2, H, W]
+            points = trunk.reshape([2, -1]).T # [n_eval_spatial, 2]
+        else:                # [n_eval_spatial, 2]
+            points = trunk
+        input = self.normalizer.norm_input(branch, trunk)
+        input = to_device(input, self.config.device)
+        with torch.no_grad():
+            prediction = self.model(*input)
+        prediction = self.normalizer.unorm_output(prediction).cpu()
+        if prediction.dim() == 3: #[1, H, W]
+            prediction = prediction.flatten() #[H*W]
+            output     = output.flatten()     #[H*W]
+
+        scatter_error2d(points[:,0], points[:,1], prediction, output, self.image_path, xlims=self.xlims,
+                        branch = branch.cpu())

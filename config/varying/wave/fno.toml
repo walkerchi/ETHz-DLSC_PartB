@@ -1,21 +1,23 @@
-# for task
-task           = "varing"
 
-# for model should retain the same as the saved weight
+# for task
+task           = "predict"
+    
+# for model 
 model          = "fno"
 num_hidden     = 64
 num_layers     = 4
 activation     = "relu"
-
+    
 # for equation
 equation       = "wave"
-T              = 1.0    # prediction time
-
+T              = 5    # prediction time
+    
 # for evaluation
-sampler        = "sobol"
-batch_size     = 16
-n_eval_sample  = 16
-n_eval_spatial = 16284
+sampler        = "mesh"
+batch_size     = 64
+n_eval_sample  = 64
+n_eval_spatial = 4096
 
 # for device
 cuda            = true # use CPU
+    

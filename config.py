@@ -5,6 +5,19 @@ import toml
 import json
 import yaml
 
+TASKS = ["train","predict","varying"]
+SAMPLERS = ["mesh", "sobol", "uniform"]
+MODELS = ["cno","ffn","deeponet","fno","kno","unet"]
+EQUATIONS = ["heat","wave"]
+EQUATION_KEYS = {
+    "heat":"d",
+    "wave":"K"
+}
+EQUATION_VALUES = [1, 2, 4, 6, 8, 16]
+EQUATION_T = {
+    "heat":0.005,
+    "wave":5
+}
 
 """
     API for config
@@ -17,13 +30,11 @@ import yaml
     2. use_file_config()
         get config from toml/json/yaml file
         # in xxx.py
-        >>> config = use_file_config()
-        # in terminal
-        >>> python xxx.py --config config.toml 
-        # or 
-        >>> python xxx.py --config config.json
-        # or
-        >>> python xxx.py --config config.yaml
+        >>> config = use_file_config("config.toml")
+        OR
+        >>> config = use_file_config("config.json")
+        OR
+        >>> config = use_file_config("config.yaml")
     3. use_kwarg_config(**kwargs)
         get config from dictionary
         # in xxx.py
@@ -35,9 +46,9 @@ def add_arguments(parser):
         default configuration,
         do the customization here!
     """
-    parser.add_argument("-t","--task",type=str, default="train", choices=["train","predict", "varying"])
-    parser.add_argument("-e","--equation", type=str,default="heat", choices=["heat", "wave"])
-    parser.add_argument("-m", "--model", type=str, default="ffn", choices=["ffn", "deeponet", "fno","cno","unet", "kno"])
+    parser.add_argument("-t","--task",type=str, default="train", choices=TASKS)
+    parser.add_argument("-e","--equation", type=str,default="heat", choices=EQUATIONS)
+    parser.add_argument("-m", "--model", type=str, default="ffn", choices=MODELS)
     parser.add_argument("--d", type=int, default=1, help="parameter of the heat equation")
     parser.add_argument("--K", type=int, default=1, help="parameter of the wave equation")
     parser.add_argument("--T", type=float, default=1.0)
@@ -57,10 +68,12 @@ def add_arguments(parser):
     parser.add_argument("--eval_every_eps", type=int, default=100)
     parser.add_argument("--epoch", type=int, default=1000)
     parser.add_argument("--cuda", action="store_true", help="whether to use cuda")
-    parser.add_argument("--sampler", type=str, default="mesh",  choices=["mesh", "sobol", "uniform"])
+    parser.add_argument("--sampler", type=str, default="mesh",  choices=SAMPLERS)
+    # only for fno
+    parser.add_argument("--modes", type=int, default=None, help="number of modes for fno")
     # only for deeponet
-    parser.add_argument("--branch_sampler", type=str, default="mesh", choices=["mesh", "sobol", "uniform"], help = "only for deeponet")
-    parser.add_argument("--trunk_sampler", type=str, default="uniform", choices=["mesh", "sobol", "uniform"], help="only for deeponet")
+    parser.add_argument("--branch_sampler", type=str, default="mesh", choices=SAMPLERS, help = "only for deeponet")
+    parser.add_argument("--trunk_sampler", type=str, default="uniform", choices=SAMPLERS, help="only for deeponet")
     parser.add_argument("--branch_arch", type=str, default="mlp", choices=["mlp", "resnet", "fno"], help="architecture of branch network for deeponet")
     parser.add_argument("--trunk_arch", type=str, default="mlp", choices=["mlp", "resnet", "fno"], help="architecture of trunk network for deeponet")
 
@@ -156,23 +169,19 @@ def use_cmd_config():
     config = adjust_config(config)
     return config
 
-def use_file_config():
+def use_file_config(filepath):
 
-    cmd_parser = argparse.ArgumentParser()
-    cmd_parser.add_argument("-c", "--config", type=str)
-    cmd_config = cmd_parser.parse_args()
-
-    if cmd_config.config.endswith(".toml"):
+    if filepath.endswith(".toml"):
         parser = TomlParser()
-    elif cmd_config.config.endswith(".json"):
+    elif filepath.endswith(".json"):
         parser = JsonParser()
-    elif cmd_config.config.endswith(".yaml") or cmd_config.config.endswith(".yml"):
+    elif filepath.endswith(".yaml") or filepath.endswith(".yml"):
         parser = YamlParser()
 
     add_arguments(parser)
 
-    config_path = os.path.abspath(cmd_config.config)
-    config = parser.parse_args(config_path)
+    filepath = os.path.abspath(filepath)
+    config = parser.parse_args(filepath)
     config = adjust_config(config)
 
     return config

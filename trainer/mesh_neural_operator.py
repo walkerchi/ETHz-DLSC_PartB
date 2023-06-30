@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import torch 
 
 from models import FNO2d,CNO2d,UNet2d,KNO2d, ModelLookUp
@@ -31,11 +32,16 @@ class MeshNeuralOperatorDatasetGenerator(DatasetGeneratorBase):
         points_sampler = SpatialSampler(self.Equation, sampler="mesh")
         points      = points_sampler(n_points).permute(2, 0, 1)  # [2, H, W]
         x_dim = self.Equation.x_domain.shape[0]
+
         for _ in range(n_sample):
+
             equation    = self.Equation(**self.kwargs)
             u0          = equation(0,      *[points[i] for i in range(x_dim)])[None, ...] # [1, H, W]
             uT          = equation(self.T, *[points[i] for i in range(x_dim)])[None, ...] # [1, H, W]  
-            input       = torch.cat([points, u0], dim=0) #[3, H, W]
+            input       = torch.cat([points, 
+                                     torch.cos(2 * np.pi * points),
+                                     torch.sin(2 * np.pi * points),
+                                     u0], dim=0) #[3, H, W]
             output      = uT
             inputs.append(input)
             outputs.append(output)
@@ -58,8 +64,9 @@ class MeshNeuralOperatorNormalizer:
             inputs  [n_samples, 3, H, W] (x, y, u0)
             outputs [n_samples, 1, H, W] u(T, x, y, mu)
         """
-        inputs_min = inputs.permute(1,0,2,3).reshape(3, -1).min(1).values[None, :, None, None]
-        inputs_max = inputs.permute(1,0,2,3).reshape(3, -1).max(1).values[None, :, None, None]
+        inputs     = inputs.permute(1,0,2,3)
+        inputs_min = inputs.reshape(inputs.shape[0], -1).min(1).values[None, :, None, None]
+        inputs_max = inputs.reshape(inputs.shape[0], -1).max(1).values[None, :, None, None]
         outputs_min = outputs.min()
         outputs_max = outputs.max()
         return cls(inputs_min, inputs_max, outputs_min, outputs_max)
@@ -109,11 +116,23 @@ class MeshNeuralOperatorTrainer(TrainerBase):
 
         Model                  = ModelLookUp[config.model]
         x_dim                  = Equation.x_domain.shape[0]
+
         self.dataset_generator = MeshNeuralOperatorDatasetGenerator(config.T, Equation, **equation_kwargs)
-        self.model             = Model(in_channel=x_dim +1, out_channel=1, hidden_channel=config.num_hidden, num_layers=config.num_layers, activation=config.activation)
+
+        if Model == FNO2d:
+            model_kwargs       = {"modes":config.modes}
+        else:
+            model_kwargs       = {}
+        self.model             = Model(in_channel=x_dim*3 +1, out_channel=1, hidden_channel=config.num_hidden, num_layers=config.num_layers, activation=config.activation,
+                                       **model_kwargs)
    
         self.weight_path       = f"weights/{config.equation}_{'_'.join([f'{k}={v}' for k,v in equation_kwargs.items()])}/{config.model}"
         self.image_path        = f"images/{config.equation}_{'_'.join([f'{k}={v}' for k,v in equation_kwargs.items()])}/{config.model}"
+
+
+    def to(self, device):
+        self.model = self.model.to(device)
+        return self
 
     def eval(self):
         """
@@ -153,16 +172,19 @@ class MeshNeuralOperatorTrainer(TrainerBase):
         return points, predictions, outputs
 
     def plot_prediction(self, n_eval_spatial):
+        self.to(self.config.device)
 
         input, output = self.dataset_generator(1, n_eval_spatial) # input (1, 3, H, W), output (1, 1, H, W)
         points = input[0, :2] # [2, H, W]
         points = points.reshape(2,-1)
         input = self.normalizer.norm_input(input)
         input = to_device(input, self.config.device)
+
         with torch.no_grad():
             prediction = self.model(input)
         prediction = self.normalizer.unorm_output(prediction) # [1, 1, H, W]
         prediction = prediction.cpu().flatten() # [H*W]
         output     = output.flatten()     # [H*W]
 
-        scatter_error2d(points[0], points[1], prediction, output, os.path.join(self.image_path, "prediction.png"), xlims=self.xlims)
+        scatter_error2d(points[0], points[1], prediction, output, self.image_path, xlims=self.xlims,
+                        input = input[0, -1].flatten().cpu())

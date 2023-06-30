@@ -1,23 +1,23 @@
-# for task
-task           = "varying"
 
-# for model should retain the same as the saved weight
+# for task
+task           = "predict"
+    
+# for model 
 model          = "ffn"
 num_hidden     = 64
 num_layers     = 4
 activation     = "relu"
-
+    
 # for equation
 equation       = "heat"
-# d              = 1     it's  not needed anymore
-T              = 1.0    # prediction time
-
+T              = 0.005    # prediction time
+    
 # for evaluation
-epoch          = 1000
-sampler        = "sobol"
-batch_size     = 262144
-n_eval_sample   = 16
-n_eval_spatial  = 16384
+sampler        = "mesh"
+batch_size     = 64
+n_eval_sample  = 64
+n_eval_spatial = 4096
 
 # for device
 cuda            = true # use CPU
+    

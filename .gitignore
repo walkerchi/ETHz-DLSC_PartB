@@ -2,3 +2,16 @@ __pycache__
 TODO.png
 README.png
 weights/
+**/error.pdf
+**/error.png
+**/predictions.pdf
+**/predictions.png
+**/uT.pdf
+**/uT.png
+**/input.pdf
+**/input.png
+**/branch.pdf
+**/branch.png
+**/tmp.*
+**/test.*
+equations/video/
