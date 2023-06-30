@@ -57,7 +57,6 @@ def add_arguments(parser):
     parser.add_argument("--n_valid_sample", type=int, default=64, help="number of validation samples,  normally how many sets of d to sample")
     parser.add_argument("--n_train_spatial", type=int, default=256)
     parser.add_argument("--n_valid_spatial", type=int, default=1024)
-    parser.add_argument("--n_basis_spatial", type=int, default=1024, help="especially for deeponet")
     parser.add_argument("--n_eval_sample", type=int, default=64)
     parser.add_argument("--n_eval_spatial", type=int, default=10000)
     parser.add_argument("--num_hidden", type=int, default=64)
@@ -72,6 +71,7 @@ def add_arguments(parser):
     # only for fno
     parser.add_argument("--modes", type=int, default=None, help="number of modes for fno")
     # only for deeponet
+    parser.add_argument("--n_basis_spatial", type=int, default=1024, help="especially for deeponet")
     parser.add_argument("--branch_sampler", type=str, default="mesh", choices=SAMPLERS, help = "only for deeponet")
     parser.add_argument("--trunk_sampler", type=str, default="uniform", choices=SAMPLERS, help="only for deeponet")
     parser.add_argument("--branch_arch", type=str, default="mlp", choices=["mlp", "resnet", "fno"], help="architecture of branch network for deeponet")

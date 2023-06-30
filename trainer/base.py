@@ -64,8 +64,12 @@ def scatter_error2d(x, y, prediction, exact, image_path, xlims, **kwrags):
     fig.savefig(os.path.join(image_path, "error.pdf"), dpi=400)
 
     for k,v in kwrags.items():
+        if  isinstance(v, (tuple,  list)):
+            x_local, y_local, v = v
+        else:
+            x_local, y_local = x, y
         fig, ax = plt.subplots(figsize=(6, 6))
-        scatter(x, y, v.flatten(), k, fig, ax, xlims)
+        scatter(x_local, y_local, v.flatten(), k, fig, ax, xlims)
         fig.savefig(os.path.join(image_path, f"{k}.png"), dpi=400)
         fig.savefig(os.path.join(image_path, f"{k}.pdf"), dpi=400)
 

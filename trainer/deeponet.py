@@ -221,6 +221,9 @@ class DeepONetTrainer(TrainerBase):
         if prediction.dim() == 3: #[1, H, W]
             prediction = prediction.flatten() #[H*W]
             output     = output.flatten()     #[H*W]
-
+    
         scatter_error2d(points[:,0], points[:,1], prediction, output, self.image_path, xlims=self.xlims,
-                        branch = branch.cpu())
+                        branch = (
+                        self.dataset_generator.basis_points[:,0].cpu(),
+                        self.dataset_generator.basis_points[:,1].cpu(),
+                        branch.cpu()))
