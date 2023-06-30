@@ -10,8 +10,8 @@ from .base import   SpatialSampler,\
                     general_call,\
                     scatter_error2d,\
                     to_device,\
-                    EquationLookUp,\
-                    EquationKwargsLookUp
+                    EquationLookUp
+from config import EQUATION_KEYS
                     
 class FFNDatasetGenerator(DatasetGeneratorBase):
     def __init__(self, T, Equation, **kwargs):
@@ -94,7 +94,8 @@ class FFNTrainer(TrainerBase):
     def __init__(self, config):
         self.config = config
         Equation = EquationLookUp[config.equation]
-        equation_kwargs = {k:config[k] for k in EquationKwargsLookUp[config.equation]}
+        equation_kwargs = {EQUATION_KEYS[config.equation]:config[EQUATION_KEYS[config.equation]]}
+        # equation_kwargs = {k:config[k] for k in EquationKwargsLookUp[config.equation]}
         self.xlims = Equation.x_domain
 
         self.dataset_generator = FFNDatasetGenerator(config.T, Equation, **equation_kwargs)

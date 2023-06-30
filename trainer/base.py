@@ -9,12 +9,12 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader, TensorDataset
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from  models import FNO2d, CNO2d, UNet2d, KNO2d, ModelLookUp
-from equations import WaveEquation, HeatEquation, EquationLookUp, EquationKwargsLookUp
+from equations import EquationLookUp
+from models import ModelLookUp
 
 def to_device(x,  device):
     if isinstance(x, torch.Tensor):
-        return x.to(device) if x.device != device is not None else x
+        return x.to(device, non_blocking=True) if x.device != device is not None else x
     elif isinstance(x, (list,  tuple)):
         return [to_device(x_, device) for x_ in x]
     elif isinstance(x, dict):
@@ -144,7 +144,7 @@ class DatasetGeneratorBase:
 
 class NormalizerBase:
     @staticmethod
-    def init(self):
+    def init():
         raise NotImplementedError()
     def __call__(self):
         raise NotImplementedError()
@@ -153,7 +153,7 @@ class NormalizerBase:
     def unorm_output(self):
         raise NotImplementedError()
     @staticmethod
-    def load(self):
+    def load():
         raise NotImplementedError()
     def save(self):
         raise NotImplementedError()
@@ -194,6 +194,13 @@ class TrainerBase:
 
         config = self.config
 
+        if config.pin_memory:
+            kwargs = {
+                "pin_memory":True,
+            }
+        else:
+            kwargs = {}
+
         train_dataset     = self.dataset_generator(config.n_train_sample, config.n_train_spatial)
         valid_dataset     = self.dataset_generator(config.n_valid_sample, config.n_valid_spatial)
         normalizer        = self.Normalizer.init(*train_dataset)
@@ -202,10 +209,12 @@ class TrainerBase:
         valid_dataset     = normalizer(*valid_dataset)
         train_dataloader  = self.DataLoader(*train_dataset,
                                     batch_size=config.batch_size, 
-                                    shuffle=True)
+                                    shuffle=True,
+                                    **kwargs)
         valid_dataloader  = self.DataLoader(*valid_dataset,
                                     batch_size=config.batch_size,
-                                    shuffle=True)
+                                    shuffle=True,
+                                     **kwargs)
         
         model = self.model.to(config.device)
         losses = {"train":[],"valid":[]}
@@ -221,7 +230,7 @@ class TrainerBase:
             
             iteration_losses = []
             for input_batch, output_batch in train_dataloader:
-            
+                
                 input_batch, output_batch = to_device([input_batch, output_batch], config.device)
 
                 optimizer.zero_grad()
@@ -320,9 +329,9 @@ class TrainerBase:
         sns.stripplot(x=k, y="l2 error", data=df, 
                    alpha=0.1,marker="D", linewidth=1, ax=ax)
         sns.lineplot(x=k, y="l2 error", data=df, ax=ax)
-        path = f"images/{self.config.equation}_varying"
-        fig.savefig(os.path.join(path, f"{self.config.model}.png"), dpi=400)
-        fig.savefig(os.path.join(path, f"{self.config.model}.pdf"), dpi=400)
+        path = f"images/{self.config.equation}/{self.config.model}"
+        fig.savefig(os.path.join(path, f"varying.png"), dpi=400)
+        fig.savefig(os.path.join(path, f"varying.pdf"), dpi=400)
 
     def plot_prediction(self):
         raise NotImplementedError()

@@ -72,7 +72,7 @@ if __name__ == '__main__':
     )
 
 
-    for d in [1, 2,4,8,16]:
+    for d in [1,2,4,8,16]:
         fig, ax = plt.subplots(figsize=(6,6))
         he = HeatEquation(d)
         mat = ax.matshow(he(0, x, y).detach().numpy(), cmap='jet')

@@ -13,11 +13,12 @@ EQUATION_KEYS = {
     "heat":"d",
     "wave":"K"
 }
-EQUATION_VALUES = [1, 2, 4, 6, 8, 16]
+EQUATION_VALUES = [1, 2, 4, 8, 16]
 EQUATION_T = {
     "heat":0.005,
     "wave":5
 }
+
 
 """
     API for config
@@ -68,6 +69,7 @@ def add_arguments(parser):
     parser.add_argument("--epoch", type=int, default=1000)
     parser.add_argument("--cuda", action="store_true", help="whether to use cuda")
     parser.add_argument("--sampler", type=str, default="mesh",  choices=SAMPLERS)
+    parser.add_argument("--pin_memory",action="store_true", help="whether to use pin_memory in dataloader")
     # only for fno
     parser.add_argument("--modes", type=int, default=None, help="number of modes for fno")
     # only for deeponet

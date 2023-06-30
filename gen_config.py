@@ -88,6 +88,7 @@ def gen_device():
     return f"""
 # for device
 cuda            = {"true" if use_cuda else "false"} # use CPU
+pin_memory      = true
     """
 
 def gen_train_config(batch_size=64):
@@ -100,7 +101,7 @@ def gen_train_config(batch_size=64):
                     **{EQUATION_KEYS[equation]:v}
                 ) + gen_training(
                     batch_size = batch_size * n_train_spatial if model == "ffn" 
-                            else int(batch_size / 4) if model  == "cno" 
+                            else int(batch_size / 4) if model  == "cno" or model == "unet"
                             else batch_size,
                     n_train_spatial = n_train_spatial
                 ) + gen_device()

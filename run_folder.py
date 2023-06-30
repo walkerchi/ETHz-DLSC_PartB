@@ -5,12 +5,17 @@ import re
 from config import use_file_config
 from main import main
 
-def run_folder(folder):
+def walk_config(folder):
     config_paths = []
     for dirpath, dirnames, filenames in os.walk(folder):
         for filename in filenames:
             if re.match(r".*\.(toml|json|yaml|yml)", filename):
                 config_paths.append(os.path.join(dirpath, filename))
+    return config_paths
+
+
+def run_folder(folder):
+    config_paths = walk_config(folder)
         
     print(config_paths)
     for i,config_path in enumerate(config_paths):

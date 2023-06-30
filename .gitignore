@@ -1,7 +1,11 @@
 __pycache__
 TODO.png
 README.png
+config/
 weights/
+images/
+videos/
+!images/readme/
 **/error.pdf
 **/error.png
 **/prediction.pdf

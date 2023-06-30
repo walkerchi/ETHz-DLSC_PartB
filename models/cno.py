@@ -40,10 +40,20 @@ class Conv2d(nn.Module):
         super().__init__()
         if transpose:
             self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride=1, padding=padding)
-            self.sampling = nn.Upsample(scale_factor=stride, mode='nearest')
+            if stride == 1:
+                self.sampling = lambda x:x 
+            elif stride > 1:
+                self.sampling = nn.Upsample(scale_factor=stride, mode='nearest')
+            else:
+                raise ValueError(f"stride must be greater than 1, but got {stride}")
         else:
             self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride=1, padding=padding)
-            self.sampling = nn.AvgPool2d(stride)
+            if stride == 1:
+                self.sampling = lambda x:x
+            elif stride > 1:
+                self.sampling = nn.AvgPool2d(stride)
+            else:
+                raise ValueError(f"stride must be greater than 1, but got {stride}")
 
         if activation is None:
             self.activation_fn = None
