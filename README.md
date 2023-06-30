@@ -95,7 +95,7 @@ $$u\vert_{\partial D} = 0 $$
 
 ##### Solution
 
-$$u(x, y) = \frac{1}{\piK^2} \sum_{i,j=1}^{K} a_{ij} \cdot (i^2 + j^2)^{r-1} sin(\pi ix) sin(\pi jy), \forall x,y \in D$$
+$$u(x, y) = \frac{1}{\pi K^2} \sum_{i,j=1}^{K} a_{ij} \cdot (i^2 + j^2)^{r-1} sin(\pi ix) sin(\pi jy),\quad \forall (x,y) \in D$$
 
 
 ## Model
