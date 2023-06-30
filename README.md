@@ -97,6 +97,9 @@ $$u\vert_{\partial D} = 0 $$
 
 $$u(x, y) = \frac{1}{\pi\cdot K^2} \sum_{i,j=1}^{K} a_{ij} \cdot (i^2 + j^2)^{r-1} sin(\pi ix) sin(\pi jy),\quad \forall (x,y) \in D$$
 
+with respect to source function
+
+$$f=\frac{\pi}{K^2} \sum_{i,j=1}^{K} a_{ij} \cdot (i^2 + j^2)^{r} sin(\pi ix) sin(\pi jy),\quad \forall (x,y) \in D$$
 
 ## Model
 
