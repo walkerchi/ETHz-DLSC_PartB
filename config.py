@@ -8,15 +8,17 @@ import yaml
 TASKS = ["train","predict","varying"]
 SAMPLERS = ["mesh", "sobol", "uniform"]
 MODELS = ["cno","ffn","deeponet","fno","kno","unet"]
-EQUATIONS = ["heat","wave"]
+EQUATIONS = ["heat","wave","poisson"]
 EQUATION_KEYS = {
     "heat":"d",
-    "wave":"K"
+    "wave":"K",
+    "poisson":"K"
 }
 EQUATION_VALUES = [1, 2, 4, 8, 16]
 EQUATION_T = {
     "heat":0.005,
-    "wave":5
+    "wave":5,
+    "poisson":1 # it doesn't matter, should be none zero
 }
 
 

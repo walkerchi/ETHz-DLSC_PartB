@@ -38,15 +38,6 @@ class  HeatEquation:
         return self.mu
 
     def __call__(self, t, x1, x2):
-    @staticmethod
-    def degree_of_freedom(d):
-        return d
-    
-    @property
-    def variable(self):
-        return self.mu
-
-    def __call__(self, t, x1, x2):
         """
             Parameters:
             -----------

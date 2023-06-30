@@ -8,12 +8,17 @@ from tqdm import tqdm
 
 from config import EQUATIONS, EQUATION_T, EQUATION_KEYS, EQUATION_VALUES, MODELS
 
-def gen_model(model):
+CNO_BATCH_SIZE_SCALE = 0.25
+CNO_N_LAYER = 4
+DEFAULT_N_LAYER = 4
+N_SPATIAL = 4096
+
+def gen_model(model, n_layers=4):
     return f"""
 # for model 
 model          = "{model}"
 num_hidden     = 64
-num_layers     = 4
+num_layers     = {n_layers}
 activation     = "relu"
     """
 
@@ -92,16 +97,18 @@ pin_memory      = true
     """
 
 def gen_train_config(batch_size=64):
-    n_train_spatial = 4096
+    n_train_spatial = N_SPATIAL
     for equation, v, model in tqdm(product(EQUATIONS, EQUATION_VALUES, MODELS), desc="generating training config"):
         config = gen_task("train"
-                )+ gen_model(model
+                )+ gen_model(model,
+                    n_layers = CNO_N_LAYER if model == "cno" or model == "unet" 
+                                else DEFAULT_N_LAYER
                 ) + gen_equation(equation, 
                     EQUATION_T[equation],
                     **{EQUATION_KEYS[equation]:v}
                 ) + gen_training(
                     batch_size = batch_size * n_train_spatial if model == "ffn" 
-                            else int(batch_size / 4) if model  == "cno" or model == "unet"
+                            else int(batch_size * CNO_BATCH_SIZE_SCALE) if model  == "cno" or model == "unet"
                             else batch_size,
                     n_train_spatial = n_train_spatial
                 ) + gen_device()
@@ -113,7 +120,9 @@ def gen_train_config(batch_size=64):
 def gen_predict_config(batch_size=64):
     for equation,v, model in tqdm(product(EQUATIONS, EQUATION_VALUES, MODELS), desc="generating predict config"):
         config = gen_task("predict"
-                )+ gen_model(model
+                )+ gen_model(model,
+                    n_layers = CNO_N_LAYER if model == "cno" or model == "unet"
+                                else 4
                 ) + gen_equation(equation, 
                     EQUATION_T[equation],
                     **{EQUATION_KEYS[equation]:v}
@@ -127,7 +136,9 @@ def gen_predict_config(batch_size=64):
 def gen_varying_config(batch_size=64):
     for equation, model in tqdm(product(EQUATIONS, MODELS), desc="generating varying config"):
         config = gen_task("predict"
-                    )+ gen_model(model
+                    )+ gen_model(model,
+                        n_layers =CNO_N_LAYER if model == "cno" or model == "unet" 
+                                else DEFAULT_N_LAYER
                     ) + gen_equation(equation, 
                         EQUATION_T[equation]
                     ) + gen_eval(
