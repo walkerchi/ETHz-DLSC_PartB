@@ -4,7 +4,7 @@ import re
 
 from config import use_file_config
 from run_folder import walk_config
-from main import main
+from run_cmd import main
 
 def run_train():
     config_paths = walk_config("config/train")

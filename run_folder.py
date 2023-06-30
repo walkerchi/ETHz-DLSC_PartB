@@ -3,7 +3,7 @@ import os
 import re
 
 from config import use_file_config
-from main import main
+from run_cmd import main
 
 def walk_config(folder):
     config_paths = []
