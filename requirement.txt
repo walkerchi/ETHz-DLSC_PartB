@@ -1,7 +1,10 @@
-torch
+pytorch-cuda=11.8
 tqdm
 numpy
 matplotlib
 argparse
 mpl_toolkits
 scipy
+seaborn
+pandas
+shutil

@@ -1,4 +1,10 @@
 __pycache__
-weights/
 TODO.png
 README.png
+config/
+weights/
+images/*
+!images/readme/
+!images/readme/*
+videos/
+equations/video/

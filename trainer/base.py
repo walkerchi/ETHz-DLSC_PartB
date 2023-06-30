@@ -9,12 +9,12 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader, TensorDataset
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from  models import FNO2d, CNO2d, UNet2d, KNO2d, ModelLookUp
-from equations import WaveEquation, HeatEquation, EquationLookUp, EquationKwargsLookUp
+from equations import EquationLookUp
+from models import ModelLookUp
 
 def to_device(x,  device):
     if isinstance(x, torch.Tensor):
-        return x.to(device) if x.device != device is not None else x
+        return x.to(device, non_blocking=True) if x.device != device is not None else x
     elif isinstance(x, (list,  tuple)):
         return [to_device(x_, device) for x_ in x]
     elif isinstance(x, dict):
@@ -30,8 +30,8 @@ def general_call(func, args):
     else:
         return func(args)
 
-def scatter(x, y, c, title, fig, ax, xlims):
-    h = ax.scatter(x, y, c=c, cmap="jet")
+def scatter(x, y, c, title, fig, ax, xlims, cmap="jet"):
+    h = ax.scatter(x, y, c=c, cmap=cmap)
     divider = make_axes_locatable(ax)
     cax = divider.append_axes('right', size='5%', pad=0.05)
     fig.colorbar(h, cax=cax, orientation='vertical')
@@ -41,16 +41,37 @@ def scatter(x, y, c, title, fig, ax, xlims):
     ax.set_ylabel("$x_2$")
     ax.set_title(title)
 
-def scatter_error2d(x, y, prediction, exact, image_path, xlims):
+def scatter_error2d(x, y, prediction, exact, image_path, xlims, **kwrags):
     fig, ax = plt.subplots(1, 3, figsize=(15,5))
     scatter(x, y, prediction.flatten(), "Prediction", fig, ax[0], xlims)
     scatter(x, y, exact.flatten(), "Exact", fig, ax[1], xlims)
     scatter(x, y, (prediction-exact).flatten(), "Error", fig, ax[2], xlims)
-    fig.savefig(image_path, dpi=400)
+    fig.savefig(os.path.join(image_path, "comparison.png"), dpi=400)
 
+    fig, ax = plt.subplots(figsize=(6, 6))
+    scatter(x, y, prediction.flatten(), "Prediction", fig, ax, xlims)
+    fig.savefig(os.path.join(image_path, "prediction.png"), dpi=400)
+    fig.savefig(os.path.join(image_path, "prediction.pdf"), dpi=400)
 
+    fig, ax = plt.subplots(figsize=(6, 6))
+    scatter(x, y, exact.flatten(), "Exact", fig, ax, xlims)
+    fig.savefig(os.path.join(image_path, "uT.png"), dpi=400)
+    fig.savefig(os.path.join(image_path, "uT.pdf"), dpi=400)
 
+    fig, ax = plt.subplots(figsize=(6, 6))
+    scatter(x, y, (prediction - exact).flatten(), "Error", fig, ax, xlims, cmap="seismic")
+    fig.savefig(os.path.join(image_path, "error.png"), dpi=400)
+    fig.savefig(os.path.join(image_path, "error.pdf"), dpi=400)
 
+    for k,v in kwrags.items():
+        if  isinstance(v, (tuple,  list)):
+            x_local, y_local, v = v
+        else:
+            x_local, y_local = x, y
+        fig, ax = plt.subplots(figsize=(6, 6))
+        scatter(x_local, y_local, v.flatten(), k, fig, ax, xlims)
+        fig.savefig(os.path.join(image_path, f"{k}.png"), dpi=400)
+        fig.savefig(os.path.join(image_path, f"{k}.pdf"), dpi=400)
 
 
 
@@ -123,7 +144,7 @@ class DatasetGeneratorBase:
 
 class NormalizerBase:
     @staticmethod
-    def init(self):
+    def init():
         raise NotImplementedError()
     def __call__(self):
         raise NotImplementedError()
@@ -132,7 +153,7 @@ class NormalizerBase:
     def unorm_output(self):
         raise NotImplementedError()
     @staticmethod
-    def load(self):
+    def load():
         raise NotImplementedError()
     def save(self):
         raise NotImplementedError()
@@ -163,12 +184,22 @@ class TrainerBase:
 
         raise  NotImplementedError()
 
+    def to(self,device):
+        self.model = self.model.to(device)
+
     def fit(self):
 
         os.makedirs(self.image_path, exist_ok=True)
         os.makedirs(self.weight_path, exist_ok=True)
 
         config = self.config
+
+        if config.pin_memory:
+            kwargs = {
+                "pin_memory":True,
+            }
+        else:
+            kwargs = {}
 
         train_dataset     = self.dataset_generator(config.n_train_sample, config.n_train_spatial)
         valid_dataset     = self.dataset_generator(config.n_valid_sample, config.n_valid_spatial)
@@ -178,10 +209,12 @@ class TrainerBase:
         valid_dataset     = normalizer(*valid_dataset)
         train_dataloader  = self.DataLoader(*train_dataset,
                                     batch_size=config.batch_size, 
-                                    shuffle=True)
+                                    shuffle=True,
+                                    **kwargs)
         valid_dataloader  = self.DataLoader(*valid_dataset,
                                     batch_size=config.batch_size,
-                                    shuffle=True)
+                                    shuffle=True,
+                                     **kwargs)
         
         model = self.model.to(config.device)
         losses = {"train":[],"valid":[]}
@@ -197,7 +230,7 @@ class TrainerBase:
             
             iteration_losses = []
             for input_batch, output_batch in train_dataloader:
-            
+                
                 input_batch, output_batch = to_device([input_batch, output_batch], config.device)
 
                 optimizer.zero_grad()
@@ -250,9 +283,6 @@ class TrainerBase:
         # plot loss
         self.plot_loss(losses['train'], losses['valid'], best_epoch, best_loss)
 
-        # plot prediction
-        self.plot_prediction(config.n_eval_spatial)
-
         self.model = model
     
     def eval(self):
@@ -277,37 +307,34 @@ class TrainerBase:
         ax.legend()
         fig.savefig(os.path.join(self.image_path, "loss.png"), dpi=400)
         
-    def plot_prediction(self, n_eval_spatial):
-
-        input, output = self.dataset_generator(1, n_eval_spatial, sampler="mesh")
-        points = input[:, :2]
-        input = self.normalizer.norm_input(input)
-        with torch.no_grad():
-            prediction = self.model(input)
-        prediction = self.normalizer.unorm_output(prediction)
-
-        scatter_error2d(points[:,0], points[:,1], prediction, output, os.path.join(self.image_path, "prediction.png"), self.xlims)
-
-    def plot_varying(self):
+    def plot_varying(self, eval_results, **kwargs):
+        """
+            eval_results: list of (position, prediction, output)
+            kwargs: {varying_key: varying_values}
+        """
         sns.set_theme()
-        varying_key = EquationKwargsLookUp[self.config.equation][0]
-        df          = {varying_key:[], "relative error":[], "l2 error":[]}
-        for value in tqdm(range(1, 11)):
-            self.config[varying_key] = value
-            position, prediction, output = self.eval()
+        df = {}
+        assert len(kwargs) == 1
+        k, vs = list(kwargs.items())[0]
+        for v, (position, prediction, output) in zip(vs,eval_results):
             prediction = prediction.numpy()
             output     = output.numpy()
-            df[varying_key].append(np.full([len(prediction)], value))
+            df[k].append(np.full([len(prediction)], v))
             df["relative error"].append((np.abs(prediction-output)/np.abs(output)).mean(-1))
             df["l2 error"].append(np.sqrt(np.mean(np.square(prediction-output), -1)))
         for k, v in df.items():
             df[k] = np.concatenate(v)
         df = pd.DataFrame.from_dict(df)
         fig, ax = plt.subplots(figsize=(12,8))
-        sns.stripplot(x=varying_key, y="l2 error", data=df, 
+        sns.stripplot(x=k, y="l2 error", data=df, 
                    alpha=0.1,marker="D", linewidth=1, ax=ax)
-        sns.lineplot(x=varying_key, y="l2 error", data=df, ax=ax)
-        fig.savefig(os.path.join(self.image_path, "varying.png"), dpi=400)
+        sns.lineplot(x=k, y="l2 error", data=df, ax=ax)
+        path = f"images/{self.config.equation}/{self.config.model}"
+        fig.savefig(os.path.join(path, f"varying.png"), dpi=400)
+        fig.savefig(os.path.join(path, f"varying.pdf"), dpi=400)
+
+    def plot_prediction(self):
+        raise NotImplementedError()
 
     def save(self):
         self.normalizer.save(os.path.join(self.weight_path, "normalizer.pth"))

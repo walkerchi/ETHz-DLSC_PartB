@@ -1,25 +1,17 @@
-from trainer import FFNTrainer, DeepONetTrainer, MeshNeuralOperatorTrainer
-from config import use_file_config
+import argparse
 
+from config import use_file_config
+from run_cmd import main
+
+
+def run_file(filepath):
+    config  = use_file_config(filepath)
+    main(config)
 
 if __name__ == '__main__':
-    config  = use_file_config()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filepath", type=str, help="path to config file(.toml, .json, .yaml)")
+    args = parser.parse_args()
     
-    if config.model == "ffn":
-        trainer = FFNTrainer(config)
-    elif config.model == "deeponet":
-        trainer = DeepONetTrainer(config)
-    else:
-        trainer = MeshNeuralOperatorTrainer(config)
-
-    if config.task == "train":
-        trainer.fit()
-        trainer.save()
-    elif config.task == "predict":
-        trainer.load()
-        trainer.plot_prediction(config.n_eval_spatial)
-    elif config.task == "varying":
-        trainer.load()
-        trainer.plot_varying()
-    else:
-        raise NotImplementedError()
+    run_file(args.filepath)
+    

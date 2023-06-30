@@ -57,7 +57,10 @@ class SpectralConv2d(nn.Module):
             output   = torch.fft.irfft2(spectral, s=x.shape[-2:]) # output [batch_size, output_channel, window_size, window_size]
         else:
             assert self.modes_y <= (x.shape[-1] // 2 + 1)/2, f"modes_y must be less than or equal to (window_size // 2 + 1)/2({(x.shape[-1]//2 + 1)/2}), got {self.modes_y}"
-            output_spectral = torch.zeros(spectral.shape, dtype=spectral.dtype, device=spectral.device)
+            spectral = torch.zeros(spectral.shape, dtype=spectral.dtype, device=spectral.device)
+            B, Ci, H, W = spectral.shape
+            Co = self.out_channel
+            output_spectral = torch.zeros([B, Co, H, W], dtype=spectral.dtype, device=spectral.device)
             output_spectral[:, :, :self.modes_x, :self.modes_y] = torch.complex(
                 torch.einsum("bixy,ioxy->boxy", spectral[:, :, :self.modes_x, :self.modes_y].real, self.weight_real) + self.bias_real,
                 torch.einsum("bixy,ioxy->boxy", spectral[:, :, :self.modes_x, :self.modes_y].imag, self.weight_imag) + self.bias_imag

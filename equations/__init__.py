@@ -6,7 +6,3 @@ EquationLookUp = {
     'heat':HeatEquation,
     'wave':WaveEquation,
 }
-EquationKwargsLookUp = {
-    'heat':("d",),
-    'wave':("K",)
-}

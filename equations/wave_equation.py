@@ -75,8 +75,39 @@ class WaveEquation:
         
 
 if __name__ == "__main__":
-    we = WaveEquation(4)
-    t = torch.tensor([0,0,0]).float()
-    x = torch.tensor([0,0,0]).float()
-    y = torch.tensor([0,0,0]).float()
-    print(we(t, x, y).shape)
+    import os
+    from matplotlib.animation  import FuncAnimation
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
+    from tqdm import tqdm
+    import matplotlib.pyplot as plt 
+
+    spatial_resolution = 64 * 64
+    time_resolution    = 100
+    T = 10
+
+    x, y = torch.meshgrid(
+        torch.linspace(-1, 1, int(np.sqrt(spatial_resolution))),
+        torch.linspace(-1, 1, int(np.sqrt(spatial_resolution)))
+    )
+
+
+    for K in [1,2,4,8,16]:
+        fig, ax = plt.subplots(figsize=(6,6))
+        he = WaveEquation(K)
+        mat = ax.matshow(he(0, x, y).detach().numpy(), cmap='jet')
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes('right', size='5%', pad=0.05)
+        cbar = fig.colorbar(mat, cax=cax, orientation='vertical')
+        def animate(i):
+            t = i * T / time_resolution
+            u = he(t, x, y)
+            ax.set_title(f"wave equation, K={K}, t={t:.5f}")
+            mat.set_data(u.detach().numpy())
+            # mat.set_clim(u.min(),u.max())
+            # cbar.update_normal(mat)
+            return mat,
+        
+        anim = FuncAnimation(fig, animate, frames=tqdm(range(time_resolution)), interval=100, blit=True)
+        os.makedirs("video/wave", exist_ok=True)
+        anim.save(f"video/wave/K={K}.mp4")
+        plt.close(fig=fig)
