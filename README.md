@@ -85,6 +85,19 @@ $$u(t, x, y, a) = \frac{\pi}{K^2} \sum_{i,j=1}^{K} a_{ij} \cdot (i^2 + j^2)^{-r}
 
 ### Poisson Equation
 
+##### PDE Equation
+
+$$ -\Delta u = (u_{xx} + u_{yy}) = f \quad (x, y) \in [0, 1]^2 $$   
+
+##### Boundary Condition
+
+$$u\vert_{\partial D} = 0 $$
+
+##### Solution
+
+$$u(x, y) = \frac{1}{\piK^2} \sum_{i,j=1}^{K} a_{ij} \cdot (i^2 + j^2)^{r-1} sin(\pi ix) sin(\pi jy), \forall x,y \in D$$
+
+
 ## Model
 
 ### MLP
