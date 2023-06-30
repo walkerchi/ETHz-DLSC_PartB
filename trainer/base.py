@@ -180,6 +180,9 @@ class TrainerBase:
 
         raise  NotImplementedError()
 
+    def to(self,device):
+        self.model = self.model.to(device)
+
     def fit(self):
 
         os.makedirs(self.image_path, exist_ok=True)
