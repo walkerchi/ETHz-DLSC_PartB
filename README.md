@@ -87,7 +87,7 @@ $$u(t, x, y, a) = \frac{\pi}{K^2} \sum_{i,j=1}^{K} a_{ij} \cdot (i^2 + j^2)^{-r}
 
 ##### PDE Equation
 
-$$ -\Delta u = (u_{xx} + u_{yy}) = f \quad (x, y) \in [0, 1]^2 $$   
+$$ -\Delta u = -(u_{xx} + u_{yy}) = f \quad (x, y) \in [0, 1]^2 $$   
 
 ##### Boundary Condition
 
