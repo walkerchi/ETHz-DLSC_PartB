@@ -159,12 +159,30 @@ class NormalizerBase:
         raise NotImplementedError()
 
 class DataLoaderBase(DataLoader):
-    def __init__(self, input=None, output=None, **kwargs):
-        if output is None:
-            super().__init__(input, **kwargs)
+    def __init__(self, input, output, batch_size, device, shuffle=False, **kwargs):
+        self.device = device
+        self.input  = to_device(input, device) 
+        self.output = to_device(output, device)
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.counter = None
+    def __iter__(self):
+        if self.shuffle:
+            index = torch.randperm(self.input.shape[0])
+            self.input  = self.input[index]
+            self.output = self.output[index]
+        self.counter = 0
+        return self
+    def __next__(self):
+        if self.counter >= self.input.shape[0]:
+            raise StopIteration
         else:
-            super().__init__(TensorDataset(input, output), **kwargs)
-
+            batch_input  = self.input[self.counter:self.counter+self.batch_size]
+            batch_output = self.output[self.counter:self.counter+self.batch_size]
+            self.counter += self.batch_size
+            return batch_input, batch_output
+         
+            
 class TrainerBase:
     DataLoader = None 
     Normalizer = None
@@ -200,7 +218,8 @@ class TrainerBase:
             }
         else:
             kwargs = {}
-
+    
+        
         train_dataset     = self.dataset_generator(config.n_train_sample, config.n_train_spatial)
         valid_dataset     = self.dataset_generator(config.n_valid_sample, config.n_valid_spatial)
         normalizer        = self.Normalizer.init(*train_dataset)
@@ -210,10 +229,12 @@ class TrainerBase:
         train_dataloader  = self.DataLoader(*train_dataset,
                                     batch_size=config.batch_size, 
                                     shuffle=True,
+                                    device = config.device,
                                     **kwargs)
         valid_dataloader  = self.DataLoader(*valid_dataset,
                                     batch_size=config.batch_size,
                                     shuffle=True,
+                                    device = config.device,
                                      **kwargs)
         
         model = self.model.to(config.device)
@@ -230,7 +251,7 @@ class TrainerBase:
             
             iteration_losses = []
             for input_batch, output_batch in train_dataloader:
-                
+
                 input_batch, output_batch = to_device([input_batch, output_batch], config.device)
 
                 optimizer.zero_grad()
@@ -256,13 +277,13 @@ class TrainerBase:
                 with torch.no_grad():
 
                     iteration_losses = []
-                    for batch_input, batch_output in valid_dataloader:
+                    for input_batch, output_batch in valid_dataloader:
 
-                        batch_input, batch_output = to_device([batch_input, batch_output], config.device)
+                        input_batch, output_batch = to_device([input_batch, output_batch], config.device)
                         
-                        prediction = general_call(model, batch_input)
+                        prediction = general_call(model, input_batch)
                         
-                        iteration_losses.append(criterion(prediction, batch_output).item())
+                        iteration_losses.append(criterion(prediction, output_batch).item())
 
                     valid_loss = np.mean(iteration_losses)
                     losses['valid'].append((ep,valid_loss))

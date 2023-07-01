@@ -133,16 +133,29 @@ class DeepONetNormalizer(NormalizerBase):
         return cls(branch_min, branch_max, trunk_min, trunk_max, output_min, output_max)
 
 class DeepONetDataLoader(DataLoaderBase):
-    def __init__(self, branch, trunk, output, **kwargs):
-        self.branch = branch 
-        self.trunk  = trunk
-        self.output = output
-        super().__init__(torch.arange(len(self.branch)), collate_fn=self.collate_fn, **kwargs)
-    def collate_fn(self, items):
-        index = torch.stack(items)
-        batch_branch = self.branch[index]
-        batch_output = self.output[index]
-        return (batch_branch, self.trunk), batch_output
+    def __init__(self, branch, trunk, output, batch_size, device, shuffle=False, **kwargs):
+        self.device = device
+        self.branch = to_device(branch, device) 
+        self.trunk  = to_device(trunk, device)
+        self.output = to_device(output, device)
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.counter = None
+    def __iter__(self):
+        if self.shuffle:
+            index = torch.randperm(self.branch.shape[0])
+            self.branch = self.branch[index]
+            self.output = self.output[index]
+        self.counter = 0
+        return self
+    def __next__(self):
+        if self.counter >= self.branch.shape[0]:
+            raise StopIteration
+        else:
+            batch_branch = self.branch[self.counter:self.counter+self.batch_size]
+            batch_output = self.output[self.counter:self.counter+self.batch_size] 
+            self.counter += self.batch_size
+            return (batch_branch, self.trunk), batch_output
 
 class DeepONetTrainer(TrainerBase):
     """
@@ -184,22 +197,21 @@ class DeepONetTrainer(TrainerBase):
         if points.dim() == 3: # [2, H, W]
             points = points.reshape([xdim, -1]).T[None,:,:].tile([config.n_eval_sample, 1, 1]) # [n_eval_sample, n_eval_spatial, 2]
         dataset           = self.normalizer(*dataset)
-        dataloader        = self.DataLoader(*dataset, batch_size=config.batch_size * config.n_eval_spatial, shuffle=True)
+        dataloader        = self.DataLoader(*dataset, batch_size=config.batch_size, device=config.device, shuffle=True)
 
         predictions = []
         outputs     = []
 
         with torch.no_grad():
-            for batch_input, batch_output in dataloader:    
-                batch_input, batch_output = to_device(batch_input, batch_output, config.device)       
-                prediction = general_call(self.model, batch_input) #[batch_size, n_eval_spatial] or [batch_size, H, W] 
+            for input_batch, output_batch in dataloader:        
+                prediction = general_call(self.model, input_batch) #[batch_size, n_eval_spatial] or [batch_size, H, W] 
                 prediction = self.normalizer.unorm_output(prediction)
-                batch_output = self.normalizer.unorm_output(batch_output)
+                output_batch = self.normalizer.unorm_output(output_batch)
                 if prediction.dim() == 3: #[batch_size, H, W]
                     prediction = prediction.reshape([-1, config.n_eval_spatial])
-                    batch_output = batch_output.reshape([-1, config.n_eval_spatial])
+                    output_batch = output_batch.reshape([-1, config.n_eval_spatial])
                 predictions.append(prediction.cpu())
-                outputs.append(batch_output.cpu())
+                outputs.append(output_batch.cpu())
 
         predictions = torch.cat(predictions, 0) #[n_eval_sample, n_eval_spatial]
         outputs     = torch.cat(outputs, 0)     #[n_eval_sample, n_eval_spatial]                

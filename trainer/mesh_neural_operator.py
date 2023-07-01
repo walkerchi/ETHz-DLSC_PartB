@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import torch 
-
+from torch.utils.data import DataLoader, TensorDataset
 from models import FNO2d,CNO2d,UNet2d,KNO2d, ModelLookUp
 from .base import   SpatialSampler,\
                     DatasetGeneratorBase,\
@@ -101,6 +101,7 @@ class MeshNeuralOperatorNormalizer:
 
 class MeshNeuralOperatorDataLoader(DataLoaderBase):
     pass
+    
 
 class MeshNeuralOperatorTrainer(TrainerBase):
     """
@@ -151,21 +152,20 @@ class MeshNeuralOperatorTrainer(TrainerBase):
         points            = points.premute(0, 2, 3, 1) # [n_eval_sample, H, W, 2]
         points            = points.reshape(config.n_eval_sample, -1, 2) # [n_eval_sample, n_eval_spatial, 2]
         dataset           = self.normalizer(*dataset)
-        dataloader        = self.DataLoader(*dataset, batch_size=config.batch_size * config.n_eval_spatial, shuffle=True)
+        dataloader        = self.DataLoader(*dataset, batch_size=config.batch_size, device=config.device, shuffle=True)
 
         predictions = []
         outputs     = []
 
         with torch.no_grad():
-            for batch_input, batch_output in dataloader:  
-                batch_input, batch_output = to_device(batch_input, batch_output, config.device)         
-                prediction   = general_call(self.model, batch_input) #[batch_size, 1, H, W] 
+            for input_batch, output_batch in dataloader:       
+                prediction   = general_call(self.model, input_batch) #[batch_size, 1, H, W] 
                 prediction   = self.normalizer.unorm_output(prediction)
-                batch_output = self.normalizer.unorm_output(batch_output)
+                output_batch = self.normalizer.unorm_output(output_batch)
                 prediction   = prediction.reshape([-1, config.n_eval_spatial]) # [batch_size, n_eval_spatial]
-                batch_output = batch_output.reshape([-1, config.n_eval_spatial])
+                output_batch = output_batch.reshape([-1, config.n_eval_spatial])
                 predictions.append(prediction.cpu())
-                outputs.append(batch_output.cpu())
+                outputs.append(output_batch.cpu())
 
         predictions = torch.cat(predictions, dim=0) # [n_eval_sample, n_eval_spatial]
         outputs     = torch.cat(outputs, dim=0)     # [n_eval_sample, n_eval_spatial]

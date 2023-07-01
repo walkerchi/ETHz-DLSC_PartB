@@ -8,16 +8,19 @@ from tqdm import tqdm
 
 from config import EQUATIONS, EQUATION_T, EQUATION_KEYS, EQUATION_VALUES, MODELS
 
-CNO_BATCH_SIZE_SCALE = 0.25
-CNO_N_LAYER = 4
+CNO_BATCH_SIZE_SCALE = 1
+CNO_N_LAYER = 2
+CNO_N_HIDDEN = 8
+FFN_N_HIDDEN = 64
 DEFAULT_N_LAYER = 4
+DEFAULT_N_HIDDEN = 64
 N_SPATIAL = 4096
 
-def gen_model(model, n_layers=4):
+def gen_model(model, n_layers=4, n_hidden=64):
     return f"""
 # for model 
 model          = "{model}"
-num_hidden     = 64
+num_hidden     = {n_hidden}
 num_layers     = {n_layers}
 activation     = "relu"
     """
@@ -102,7 +105,10 @@ def gen_train_config(batch_size=64):
         config = gen_task("train"
                 )+ gen_model(model,
                     n_layers = CNO_N_LAYER if model == "cno" or model == "unet" 
-                                else DEFAULT_N_LAYER
+                                else DEFAULT_N_LAYER,
+                    n_hidden = CNO_N_HIDDEN if model == "cno" or model == "unet"
+                                else FFN_N_HIDDEN if model == "ffn"
+                                else DEFAULT_N_HIDDEN
                 ) + gen_equation(equation, 
                     EQUATION_T[equation],
                     **{EQUATION_KEYS[equation]:v}
@@ -122,7 +128,10 @@ def gen_predict_config(batch_size=64):
         config = gen_task("predict"
                 )+ gen_model(model,
                     n_layers = CNO_N_LAYER if model == "cno" or model == "unet"
-                                else 4
+                                else DEFAULT_N_LAYER,
+                    n_hidden = CNO_N_HIDDEN if model == "cno" or model == "unet"
+                                else FFN_N_HIDDEN if model == "ffn"
+                                else DEFAULT_N_HIDDEN
                 ) + gen_equation(equation, 
                     EQUATION_T[equation],
                     **{EQUATION_KEYS[equation]:v}
@@ -138,7 +147,10 @@ def gen_varying_config(batch_size=64):
         config = gen_task("predict"
                     )+ gen_model(model,
                         n_layers =CNO_N_LAYER if model == "cno" or model == "unet" 
-                                else DEFAULT_N_LAYER
+                                else DEFAULT_N_LAYER,
+                        n_hidden = CNO_N_HIDDEN if model == "cno" or model == "unet"
+                                else FFN_N_HIDDEN if model == "ffn"
+                                else DEFAULT_N_HIDDEN
                     ) + gen_equation(equation, 
                         EQUATION_T[equation]
                     ) + gen_eval(
