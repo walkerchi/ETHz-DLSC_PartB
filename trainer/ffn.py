@@ -116,6 +116,7 @@ class FFNTrainer(TrainerBase):
                 outputs: torch.Tensor, shape=(n_eval_sample, n_eval_spatial)
 
         """
+        self.to(self.config.device)
         config            = self.config
         x_dim             = self.xlims.shape[0]
         dataset           = self.dataset_generator(config.n_eval_sample, config.n_eval_spatial, sampler=config.sampler) # input (x, y, ...mu), output
@@ -127,7 +128,8 @@ class FFNTrainer(TrainerBase):
         outputs     = []
 
         with torch.no_grad():
-            for input_batch, output_batch in dataloader:      
+            for input_batch, output_batch in dataloader:  
+                
                 prediction = general_call(self.model, input_batch) #[batch_size*n_eval_spatial, 1] 
                 prediction = self.normalizer.unorm_output(prediction).reshape([-1, config.n_eval_spatial]) # [batch_size, n_eval_spatial]
                 output_batch = self.normalizer.unorm_output(output_batch).reshape([-1, config.n_eval_spatial])

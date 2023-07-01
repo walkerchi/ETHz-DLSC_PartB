@@ -149,19 +149,20 @@ class MeshNeuralOperatorTrainer(TrainerBase):
                 predictions: torch.Tensor, shape=(n_eval_sample, n_eval_spatial)
                 outputs: torch.Tensor, shape=(n_eval_sample, n_eval_spatial)
         """
+        self.to(self.config.device)
         config            = self.config
         x_dim             = self.xlims.shape[0]
         dataset           = self.dataset_generator(config.n_eval_sample, config.n_eval_spatial) # input (x,y,u0), output (u)
         points            = dataset[0] # [n_eval_sample, 3, H, W]
         points            = points[:, :x_dim] # [n_eval_sample, 2, H, W]
-        points            = points.premute(0, 2, 3, 1) # [n_eval_sample, H, W, 2]
+        points            = points.permute(0, 2, 3, 1) # [n_eval_sample, H, W, 2]
         points            = points.reshape(config.n_eval_sample, -1, 2) # [n_eval_sample, n_eval_spatial, 2]
         dataset           = self.normalizer(*dataset)
         dataloader        = self.DataLoader(*dataset, batch_size=config.batch_size, device=config.device, shuffle=True)
 
         predictions = []
         outputs     = []
-
+    
         with torch.no_grad():
             for input_batch, output_batch in dataloader:       
                 prediction   = general_call(self.model, input_batch) #[batch_size, 1, H, W] 

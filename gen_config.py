@@ -18,6 +18,10 @@ DEFAULT_N_LAYER = 4
 DEFAULT_N_HIDDEN = 64
 N_SPATIAL = 4096
 
+"""
+    config generaton helper functions
+"""
+
 def gen_model(model, n_layers=4, n_hidden=64):
     return f"""
 # for model 
@@ -103,8 +107,11 @@ cuda            = {"true" if use_cuda else "false"} # use CPU
 pin_memory      = true
     """
 
+"""
+    config generaton main functions
+"""
+
 def gen_train_config(batch_size=64):
-    n_train_spatial = N_SPATIAL
     for equation, v, model in tqdm(product(EQUATIONS, EQUATION_VALUES, MODELS), desc="generating training config"):
         config = gen_task("train"
                 )+ gen_model(model,
@@ -117,10 +124,10 @@ def gen_train_config(batch_size=64):
                     EQUATION_T[equation],
                     **{EQUATION_KEYS[equation]:v}
                 ) + gen_training(
-                    batch_size = batch_size * n_train_spatial if model == "ffn" 
+                    batch_size = batch_size * N_SPATIAL if model == "ffn" 
                             else int(batch_size * CNO_BATCH_SIZE_SCALE) if model  == "cno" or model == "unet"
                             else batch_size,
-                    n_train_spatial = n_train_spatial
+                    n_train_spatial = N_SPATIAL
                 ) + gen_device()
         dirpath = f"config/train/{equation}_{EQUATION_KEYS[equation]}={v}"
         os.makedirs(dirpath, exist_ok=True)
@@ -148,7 +155,7 @@ def gen_predict_config(batch_size=64):
 
 def gen_varying_config(batch_size=64):
     for equation, model in tqdm(product(EQUATIONS, MODELS), desc="generating varying config"):
-        config = gen_task("predict"
+        config = gen_task("varying"
                     )+ gen_model(model,
                         n_layers =CNO_N_LAYER if model == "cno" or model == "unet" 
                                 else DEFAULT_N_LAYER,
@@ -158,6 +165,9 @@ def gen_varying_config(batch_size=64):
                     ) + gen_equation(equation, 
                         EQUATION_T[equation]
                     ) + gen_eval(
+                            batch_size = batch_size * N_SPATIAL if model == "ffn" 
+                            else int(batch_size * CNO_BATCH_SIZE_SCALE) if model  == "cno" or model == "unet"
+                            else batch_size,
                     ) + gen_device()
         dirpath = f"config/varying/{equation}"
         os.makedirs(dirpath, exist_ok=True)

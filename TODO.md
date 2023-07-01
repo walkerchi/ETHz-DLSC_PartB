@@ -45,3 +45,15 @@
 - [x]  train KNO, save weight and plot prediction
 - [ ]  optimize the train configuration for KNO
 - [ ]  plot varying d/K plot for KNO
+
+## Report
+
+- [ ] abstract/introduction/concolusion report
+- [ ] run varying spatial sampling result
+- [ ] run varying $d$ or $K$ result
+
+## Possible
+
+- [ ] train your own weight with fixed random seed
+- [ ] varying spatial sampler size 
+

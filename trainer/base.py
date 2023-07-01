@@ -349,23 +349,28 @@ class TrainerBase:
             kwargs: {varying_key: varying_values}
         """
         sns.set_theme()
-        df = {}
+        
         assert len(kwargs) == 1
         k, vs = list(kwargs.items())[0]
+        df = {k:[], "relative error":[], "l2 error":[]}
         for v, (position, prediction, output) in zip(vs,eval_results):
             prediction = prediction.numpy()
             output     = output.numpy()
             df[k].append(np.full([len(prediction)], v))
             df["relative error"].append((np.abs(prediction-output)/np.abs(output)).mean(-1))
             df["l2 error"].append(np.sqrt(np.mean(np.square(prediction-output), -1)))
-        for k, v in df.items():
-            df[k] = np.concatenate(v)
+        for key, value in df.items():
+            df[key] = np.concatenate(value)
         df = pd.DataFrame.from_dict(df)
-        fig, ax = plt.subplots(figsize=(12,8))
-        sns.stripplot(x=k, y="l2 error", data=df, 
-                   alpha=0.1,marker="D", linewidth=1, ax=ax)
-        sns.lineplot(x=k, y="l2 error", data=df, ax=ax)
+        # fig, ax = plt.subplots(figsize=(12,8))
+        # sns.stripplot(x=k, y="l2 error", data=df, 
+        #            alpha=0.1,marker="D", linewidth=1, ax=ax)
+        # sns.lineplot(x=k, y="l2 error", data=df, ax=ax)
         path = f"images/{self.config.equation}/{self.config.model}"
+      
+        fig = sns.lmplot(x=k, y="l2 error", data=df, y_jitter=.02, logistic=True, truncate=False)
+       
+        os.makedirs(path, exist_ok=True)
         fig.savefig(os.path.join(path, f"varying.png"), dpi=400)
         fig.savefig(os.path.join(path, f"varying.pdf"), dpi=400)
 

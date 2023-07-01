@@ -180,6 +180,7 @@ class DeepONetTrainer(TrainerBase):
                                                           branch_sampler=config.branch_sampler,
                                                           trunk_sampler=config.trunk_sampler,
                                                           seed=self.config.seed, **equation_kwargs)
+        
         self.model             = DeepONet(branch_size    = config.n_basis_spatial, 
                                         trunk_size      = Equation.x_domain.shape[0], 
                                         hidden_size     = config.num_hidden, 
@@ -199,7 +200,7 @@ class DeepONetTrainer(TrainerBase):
                 predictions: torch.Tensor, shape=(n_eval_sample, n_eval_spatial)
                 outputs:     torch.Tensor, shape=(n_eval_sample, n_eval_spatial)
         """
-
+        self.to(self.config.device)
         config            = self.config
         dataset           = self.dataset_generator(config.n_eval_sample, config.n_eval_spatial) # branch, trunk, output
         points            = dataset[1] # trunk [2, H, W] or [n_eval_spatial, 2]

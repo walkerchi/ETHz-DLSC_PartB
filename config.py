@@ -15,6 +15,7 @@ EQUATION_KEYS = {
     "poisson":"K"
 }
 EQUATION_VALUES = [1, 2, 4, 8, 16]
+SPATIAL_SAMPLING = [16 * 16, 32 * 32, 64 * 64]
 EQUATION_T = {
     "heat":0.005,
     "wave":5,
