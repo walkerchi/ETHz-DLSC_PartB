@@ -5,12 +5,18 @@ import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
 import seaborn as sns
+import random
 from tqdm import tqdm
 from torch.utils.data import DataLoader, TensorDataset
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from equations import EquationLookUp
 from models import ModelLookUp
+
+def set_seed(seed):
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
 
 def to_device(x,  device):
     if isinstance(x, torch.Tensor):
@@ -42,26 +48,32 @@ def scatter(x, y, c, title, fig, ax, xlims, cmap="jet"):
     ax.set_title(title)
 
 def scatter_error2d(x, y, prediction, exact, image_path, xlims, **kwrags):
+    os.makedirs(image_path, exist_ok=True)
+
     fig, ax = plt.subplots(1, 3, figsize=(15,5))
     scatter(x, y, prediction.flatten(), "Prediction", fig, ax[0], xlims)
     scatter(x, y, exact.flatten(), "Exact", fig, ax[1], xlims)
     scatter(x, y, (prediction-exact).flatten(), "Error", fig, ax[2], xlims)
     fig.savefig(os.path.join(image_path, "comparison.png"), dpi=400)
+    plt.close(fig=fig)
 
     fig, ax = plt.subplots(figsize=(6, 6))
     scatter(x, y, prediction.flatten(), "Prediction", fig, ax, xlims)
     fig.savefig(os.path.join(image_path, "prediction.png"), dpi=400)
     fig.savefig(os.path.join(image_path, "prediction.pdf"), dpi=400)
+    plt.close(fig=fig)
 
     fig, ax = plt.subplots(figsize=(6, 6))
     scatter(x, y, exact.flatten(), "Exact", fig, ax, xlims)
     fig.savefig(os.path.join(image_path, "uT.png"), dpi=400)
     fig.savefig(os.path.join(image_path, "uT.pdf"), dpi=400)
+    plt.close(fig=fig)
 
     fig, ax = plt.subplots(figsize=(6, 6))
     scatter(x, y, (prediction - exact).flatten(), "Error", fig, ax, xlims, cmap="seismic")
     fig.savefig(os.path.join(image_path, "error.png"), dpi=400)
     fig.savefig(os.path.join(image_path, "error.pdf"), dpi=400)
+    plt.close(fig=fig)
 
     for k,v in kwrags.items():
         if  isinstance(v, (tuple,  list)):
@@ -72,6 +84,7 @@ def scatter_error2d(x, y, prediction, exact, image_path, xlims, **kwrags):
         scatter(x_local, y_local, v.flatten(), k, fig, ax, xlims)
         fig.savefig(os.path.join(image_path, f"{k}.png"), dpi=400)
         fig.savefig(os.path.join(image_path, f"{k}.pdf"), dpi=400)
+        plt.close(fig=fig)
 
 
 
@@ -91,6 +104,7 @@ class SpatialSampler:
             torch.Size([10000, 2])
     """
     def __init__(self, Equation, sampler="mesh"):
+
         assert sampler  in ["mesh", "sobol", "uniform"]
         dimension = Equation.x_domain.shape[0]
         self.dimension = dimension
@@ -327,6 +341,7 @@ class TrainerBase:
         ax.set_yscale("log")
         ax.legend()
         fig.savefig(os.path.join(self.image_path, "loss.png"), dpi=400)
+        plt.close(fig=fig)
         
     def plot_varying(self, eval_results, **kwargs):
         """

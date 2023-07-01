@@ -11,15 +11,18 @@ from .base import   SpatialSampler,\
                     general_call,\
                     scatter_error2d,\
                     to_device,\
+                    set_seed,\
                     EquationLookUp
 from config import EQUATION_KEYS
 
 
 class MeshNeuralOperatorDatasetGenerator(DatasetGeneratorBase):
-    def __init__(self, T, Equation, **kwargs):
+    def __init__(self, T, Equation,seed=1234, **kwargs):
         self.kwargs = kwargs
         self.T = T
         self.Equation = Equation
+        self.seed = seed 
+        set_seed(seed)
 
     def __call__(self, n_sample, n_points, **kwargs):
         """
@@ -119,10 +122,12 @@ class MeshNeuralOperatorTrainer(TrainerBase):
         Model                  = ModelLookUp[config.model]
         x_dim                  = Equation.x_domain.shape[0]
 
-        self.dataset_generator = MeshNeuralOperatorDatasetGenerator(config.T, Equation, **equation_kwargs)
+        self.dataset_generator = MeshNeuralOperatorDatasetGenerator(config.T, Equation, seed=self.config.seed, **equation_kwargs)
 
         if Model == FNO2d:
             model_kwargs       = {"modes":config.modes}
+        elif Model == CNO2d:
+            model_kwargs       = {"jit":config.jit}
         else:
             model_kwargs       = {}
         self.model             = Model(in_channel=x_dim*3 +1, out_channel=1, hidden_channel=config.num_hidden, num_layers=config.num_layers, activation=config.activation,

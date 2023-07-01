@@ -10,14 +10,17 @@ from .base import   SpatialSampler,\
                     general_call,\
                     scatter_error2d,\
                     to_device,\
+                    set_seed,\
                     EquationLookUp
 from config import EQUATION_KEYS
                     
 class FFNDatasetGenerator(DatasetGeneratorBase):
-    def __init__(self, T, Equation, **kwargs):
+    def __init__(self, T, Equation, seed=1234, **kwargs):
         self.T        = T
         self.kwargs   = kwargs
         self.Equation = Equation 
+        self.seed     = seed 
+        set_seed(seed)
 
     def __call__(self, n_sample, n_points, sampler="mesh"):
         """
@@ -98,7 +101,7 @@ class FFNTrainer(TrainerBase):
         # equation_kwargs = {k:config[k] for k in EquationKwargsLookUp[config.equation]}
         self.xlims = Equation.x_domain
 
-        self.dataset_generator = FFNDatasetGenerator(config.T, Equation, **equation_kwargs)
+        self.dataset_generator = FFNDatasetGenerator(config.T, Equation, seed=self.config.seed, **equation_kwargs)
         self.model             = FFN(input_size=2+Equation.degree_of_freedom(**equation_kwargs), output_size=1, hidden_size=config.num_hidden, num_layers=config.num_layers, activation=config.activation)
    
         self.weight_path       = f"weights/{config.equation}_{'_'.join([f'{k}={v}' for k,v in equation_kwargs.items()])}/ffn"

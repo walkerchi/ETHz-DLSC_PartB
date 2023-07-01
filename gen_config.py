@@ -8,9 +8,11 @@ from tqdm import tqdm
 
 from config import EQUATIONS, EQUATION_T, EQUATION_KEYS, EQUATION_VALUES, MODELS
 
+SEED = 1234
 CNO_BATCH_SIZE_SCALE = 1
 CNO_N_LAYER = 2
 CNO_N_HIDDEN = 8
+CNO_JIT     = True
 FFN_N_HIDDEN = 64
 DEFAULT_N_LAYER = 4
 DEFAULT_N_HIDDEN = 64
@@ -23,6 +25,7 @@ model          = "{model}"
 num_hidden     = {n_hidden}
 num_layers     = {n_layers}
 activation     = "relu"
+jit            = {"true" if CNO_JIT else "false"}
     """
 
 def gen_equation(equation, T, **kwargs):
@@ -47,6 +50,7 @@ def gen_task(task):
     return f"""
 # for task
 task           = "{task}"
+seed           = {SEED}
     """
 
 def gen_training(epoch = 1000, 

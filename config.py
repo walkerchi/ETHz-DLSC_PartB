@@ -72,12 +72,15 @@ def add_arguments(parser):
     parser.add_argument("--cuda", action="store_true", help="whether to use cuda")
     parser.add_argument("--sampler", type=str, default="mesh",  choices=SAMPLERS)
     parser.add_argument("--pin_memory",action="store_true", help="whether to use pin_memory in dataloader")
+    parser.add_argument("--seed", type=int, default=1234, help="random seed")
+    # only for cno
+    parser.add_argument("--jit", action="store_true", help="whether to use jit in cno")
     # only for fno
     parser.add_argument("--modes", type=int, default=None, help="number of modes for fno")
     # only for deeponet
     parser.add_argument("--n_basis_spatial", type=int, default=1024, help="especially for deeponet")
     parser.add_argument("--branch_sampler", type=str, default="mesh", choices=SAMPLERS, help = "only for deeponet")
-    parser.add_argument("--trunk_sampler", type=str, default="uniform", choices=SAMPLERS, help="only for deeponet")
+    parser.add_argument("--trunk_sampler", type=str, default="mesh", choices=SAMPLERS, help="only for deeponet")
     parser.add_argument("--branch_arch", type=str, default="mlp", choices=["mlp", "resnet", "fno"], help="architecture of branch network for deeponet")
     parser.add_argument("--trunk_arch", type=str, default="mlp", choices=["mlp", "resnet", "fno"], help="architecture of trunk network for deeponet")
 

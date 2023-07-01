@@ -23,7 +23,7 @@ from torch.utils.file_baton import FileBaton
 #----------------------------------------------------------------------------
 # Global options.
 
-verbosity = 'brief' # Verbosity level: 'none', 'brief', 'full'
+verbosity = 'none' # Verbosity level: 'none', 'brief', 'full'
 
 
 _cached_plugins = dict()

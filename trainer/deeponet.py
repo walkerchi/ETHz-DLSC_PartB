@@ -9,6 +9,7 @@ from .base import   SpatialSampler,\
                     general_call,\
                     scatter_error2d,\
                     to_device,\
+                    set_seed,\
                     EquationLookUp
 from config import EQUATION_KEYS
 
@@ -32,9 +33,10 @@ class DeepONetDatasetGenerator(DatasetGeneratorBase):
                  branch_arch="mlp", 
                  trunk_arch="mlp", 
                  branch_sampler="mesh",
-                 trunk_sampler="uniform",
+                 trunk_sampler="mesh",
+                 seed=1234,
                  **kwargs):
-        
+        self.seed     = seed
         self.kwargs   = kwargs
         self.T        = T
         self.Equation =  Equation
@@ -46,11 +48,12 @@ class DeepONetDatasetGenerator(DatasetGeneratorBase):
             assert branch_sampler == "mesh", f"branch_sampler must be mesh when branch_arch is {branch_arch}"
 
         # sample basis
-        basis_sampler  = SpatialSampler(self.Equation(**self.kwargs), sampler=branch_sampler )
+        basis_sampler  = SpatialSampler(self.Equation(**self.kwargs), sampler=branch_sampler)
         basis_points   = basis_sampler(n_basis,flatten = (branch_arch=="mlp"))
         self.basis_points = basis_points # [n_basis, 2] or [H, W, 2]
 
         self.trunk_sampler = trunk_sampler
+        set_seed(seed)
 
     def load(self, path):
         self.basis_points = torch.load(path)
@@ -63,6 +66,7 @@ class DeepONetDatasetGenerator(DatasetGeneratorBase):
         if self.trunk_arch in ["resnet", "fno"]:
             assert self.trunk_sampler == "mesh", f"trunk_sampler must be mesh when trunk_arch is {self.trunk_arch}"
         
+
         trunk_sampler = SpatialSampler(self.Equation, sampler=self.trunk_sampler)
         x_dim         = self.Equation.x_domain.shape[0]
         trunk_points  = trunk_sampler(n_points, flatten=(self.trunk_arch=="mlp")) # [n_points, 2] or [H, W, 2]
@@ -170,7 +174,12 @@ class DeepONetTrainer(TrainerBase):
         # equation_kwargs = {k:config[k] for k in EquationKwargsLookUp[config.equation]}
         self.xlims = Equation.x_domain
 
-        self.dataset_generator = DeepONetDatasetGenerator(config.T, config.n_basis_spatial, Equation, **equation_kwargs)
+        self.dataset_generator = DeepONetDatasetGenerator(config.T, config.n_basis_spatial, Equation, 
+                                                          branch_arch=config.branch_arch,
+                                                          trunk_arch=config.trunk_arch,
+                                                          branch_sampler=config.branch_sampler,
+                                                          trunk_sampler=config.trunk_sampler,
+                                                          seed=self.config.seed, **equation_kwargs)
         self.model             = DeepONet(branch_size    = config.n_basis_spatial, 
                                         trunk_size      = Equation.x_domain.shape[0], 
                                         hidden_size     = config.num_hidden, 
@@ -190,6 +199,7 @@ class DeepONetTrainer(TrainerBase):
                 predictions: torch.Tensor, shape=(n_eval_sample, n_eval_spatial)
                 outputs:     torch.Tensor, shape=(n_eval_sample, n_eval_spatial)
         """
+
         config            = self.config
         dataset           = self.dataset_generator(config.n_eval_sample, config.n_eval_spatial) # branch, trunk, output
         points            = dataset[1] # trunk [2, H, W] or [n_eval_spatial, 2]
@@ -219,6 +229,7 @@ class DeepONetTrainer(TrainerBase):
         return points, predictions, outputs
     
     def plot_prediction(self, n_eval_spatial):
+        set_seed(self.config.seed)
         self.to(self.config.device)
 
         branch, trunk, output = self.dataset_generator(1, n_eval_spatial) # branch, trunk, output

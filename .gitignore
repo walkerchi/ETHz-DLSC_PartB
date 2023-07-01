@@ -8,3 +8,4 @@ images/*
 !images/readme/*
 videos/
 equations/video/
+*.zip

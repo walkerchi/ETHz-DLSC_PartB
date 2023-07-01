@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 import scipy.signal
 import warnings
+from functools import partial
 from extension.filtered_lrelu import filtered_lrelu
 
 
@@ -457,6 +458,7 @@ class UpBlock2d(nn.Module):
                  kernel_size=3,
                  scale_factor=2,
                  activation='relu',
+                 jit=True,
                  Conv2d=UpFIRDnConv2d):
         super().__init__()
         self.input_channel = out_channel * (scale_factor**2)
@@ -590,6 +592,8 @@ class CNO2d(GeneralUNet2d):
                 num_layers=4,
                 kernel_size=3,
                 depth=3,
-                **kwargs):
-        super().__init__(in_channel, out_channel, hidden_channel, num_layers, kernel_size, depth, activation=None, Conv2d=UpFIRDnConv2d)
+                jit=True,
+                activation=None):
+        super().__init__(in_channel, out_channel, hidden_channel, num_layers, kernel_size, depth, activation=None, 
+                         Conv2d=partial(UpFIRDnConv2d,  jit=jit) ) 
 
