@@ -91,7 +91,7 @@ $$
 #### PDE equation
 
 $$
-u_t = \nabla u\quad t \in  [0,T],(x_1,x_2)\in  [-1,1]^2,  \mu\in  [-1,1]^d
+u_t = \Delta u\quad t \in  [0,T],(x_1,x_2)\in  [-1,1]^2,  \mu\in  [-1,1]^d
 $$
 
 $$
