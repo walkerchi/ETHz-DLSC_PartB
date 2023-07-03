@@ -9,19 +9,19 @@ TASKS = ["train","predict","varying"]
 SAMPLERS = ["mesh", "sobol", "uniform"]
 MODELS = ["cno","ffn","deeponet","fno","kno","unet"]
 EQUATIONS = ["heat","wave","poisson"]
-EQUATION_KEYS = {
+EQUATION_KEY = {
     "heat":"d",
     "wave":"K",
     "poisson":"K"
 }
 EQUATION_VALUES = [1, 2, 4, 8, 16]
-SPATIAL_SAMPLING = [16 * 16, 32 * 32, 64 * 64]
+SPATIAL_SAMPLINGS = [16 * 16, 32 * 32, 64 * 64]
 EQUATION_T = {
     "heat":0.005,
     "wave":5,
     "poisson":1 # it doesn't matter, should be none zero
 }
-
+D = [16, 32, 64]
 
 """
     API for config
