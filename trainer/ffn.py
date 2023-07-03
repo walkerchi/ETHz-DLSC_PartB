@@ -12,7 +12,7 @@ from .base import   SpatialSampler,\
                     to_device,\
                     set_seed,\
                     EquationLookUp
-from config import EQUATION_KEYS
+from config import EQUATION_KEY
                     
 class FFNDatasetGenerator(DatasetGeneratorBase):
     def __init__(self, T, Equation, seed=1234, **kwargs):

@@ -1,5 +1,5 @@
 from trainer import FFNTrainer, DeepONetTrainer, MeshNeuralOperatorTrainer
-from config import use_cmd_config, EQUATION_VALUES, EQUATION_KEYS
+from config import use_cmd_config, EQUATION_VALUES, EQUATION_KEY
 
 
 def build_trainer(config):
