@@ -36,9 +36,9 @@ def gen_equation(equation, T, **kwargs):
         k, v = list(kwargs.items())[0]
         return f"""
 # for equation
-equation       = "{equation}"
-{k}              = {v}      # source component dimension
-T              = {T}    # prediction time
+equation = "{equation}"
+{k}      = {v}      # source component dimension
+T        = {T}    # prediction time
     """ 
     elif len(kwargs) == 0:
         return f"""
@@ -129,7 +129,7 @@ def gen_train_config(batch_size=64):
                             else int(batch_size * CNO_BATCH_SIZE_SCALE) if model  == "cno" or model == "unet"
                             else batch_size,
                 ) + gen_device()
-        dirpath = f"config/train/{equation}_{EQUATION_KEY[equation]}={v}"
+        dirpath = f"config/train/{equation}_{EQUATION_KEY[equation]}={v}_{n_spatial}_{d}"
         os.makedirs(dirpath, exist_ok=True)
         with open(os.path.join(dirpath, f"{model}.toml"), "w") as f:
             f.write(config)
@@ -148,7 +148,7 @@ def gen_predict_config(batch_size=64):
                     **{EQUATION_KEY[equation]:v}
                 ) + gen_predict(n_eval_spatial=n_spatial
                 ) + gen_device()
-        dirpath = f"config/predict/{equation}_{EQUATION_KEY[equation]}={v}"
+        dirpath = f"config/predict/{equation}_{EQUATION_KEY[equation]}={v}_{n_spatial}"
         os.makedirs(dirpath, exist_ok=True)
         with open(os.path.join(dirpath, f"{model}.toml"), "w") as f:
             f.write(config)
@@ -171,7 +171,7 @@ def gen_varying_config(batch_size=64):
                             else int(batch_size * CNO_BATCH_SIZE_SCALE) if model  == "cno" or model == "unet"
                             else batch_size,
                     ) + gen_device()
-        dirpath = f"config/varying/{equation}"
+        dirpath = f"config/varying/{equation}_{n_spatial}_{d}"
         os.makedirs(dirpath, exist_ok=True)
         with open(os.path.join(dirpath, f"{model}.toml"), "w") as f:
             f.write(config)
