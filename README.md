@@ -71,17 +71,23 @@ python main.py --task train --model deeponet --equation heat
 1. a standard feed forward neural network to approximate the function $g$
 
 $$
-g(x,y,\mu  ) = u(T, x, y, \mu  )
+g(x,y,\mu) = u(T, x, y, \mu)
 $$
 
 2. an operator network (DeepONet) or Neural Operator to approximate the operator $\mathcal G$
 
 $$
-G(u_0)(x,y) = u(T,x,y)
+\mathcal G(u_0)(x,y) = u(T,x,y)
 $$
 
+We have the theoretical congruity and practical approximation
+$$ 
+g(x,y,\mu) = \mathcal G(u_0)(x,y) 
 $$
-G(u_0)(x,y) = u(T,x,y)
+
+and for each component
+$$ 
+g(x,y,\mu^{(j)}) = \mathcal G(u_0^{(j)})(x,y) 
 $$
 
 ## Equation
@@ -91,16 +97,17 @@ $$
 #### PDE equation
 
 $$
-u_t = \Delta u\quad t \in  [0,T],(x_1,x_2)\in  [-1,1]^2,  \mu\in  [-1,1]^d
+u(t,x_1,x_2) = \Delta u 
+$$
+
+where 
+$$ t \in [0,T],\quad(x_1,x_2)\in  [-1,1]^2
 $$
 
 $$
 \mu\sim Unif([-1,1]^d)
 $$
 
-$$
-\mu\sim Unif([-1,1]^d)
-$$
 
 #### initial condition
 
@@ -110,7 +117,7 @@ $$
 #### boundary condition
 
 $$
-u(t,\\\\\{-1,1\\\\\},\\\\\{-1,1\\\\\},\mu) = 0
+u(t, \pm 1, \pm 1) = 0
 $$
 
 #### solution 
@@ -220,7 +227,7 @@ $$
   this is the directory to put three kinds of trainer, they are
   - ffn trainer, which takes the form as $g(x,y,\mu ) = u(T, x, y, \mu )$.
     
-  - deeponet trainer, which takes the form as $G(u0)(x1,x2)$.
+  - DeepONet trainer, which takes the form as $G(u0)(x1,x2)$.
   
   - mesh neural operator trainer, which takes the form as $G(u0,x1,x2)$.
     They can only tackle the mesh sampling input
