@@ -11,7 +11,7 @@ from .base import   SpatialSampler,\
                     to_device,\
                     set_seed,\
                     EquationLookUp
-from config import EQUATION_KEYS
+from config import EQUATION_KEY
 
 
 class DeepONetDatasetGenerator(DatasetGeneratorBase):
@@ -170,7 +170,7 @@ class DeepONetTrainer(TrainerBase):
     def __init__(self, config):
         self.config = config
         Equation = EquationLookUp[config.equation]
-        equation_kwargs = {EQUATION_KEYS[config.equation]:config[EQUATION_KEYS[config.equation]]}
+        equation_kwargs = {EQUATION_KEY[config.equation]:config[EQUATION_KEY[config.equation]]}
         # equation_kwargs = {k:config[k] for k in EquationKwargsLookUp[config.equation]}
         self.xlims = Equation.x_domain
 

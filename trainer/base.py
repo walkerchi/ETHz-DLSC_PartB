@@ -15,7 +15,7 @@ from itertools import product
 
 from equations import EquationLookUp
 from models import ModelLookUp
-from config import MODELS,  EQUATION_KEYS, EQUATION_VALUES
+from config import MODELS,  EQUATION_KEY, EQUATION_VALUES
 def set_seed(seed):
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -379,7 +379,7 @@ class TrainerBase:
         predictions = torch.stack(predictions, 0).reshape(len(EQUATION_VALUES), len(MODELS), self.config.n_eval_sample, self.config.n_eval_spatial) # [n_values, n_model, n_sample, n_spatial]
         outputs     = torch.stack(outputs,     0).reshape(len(EQUATION_VALUES), len(MODELS), self.config.n_eval_sample, self.config.n_eval_spatial) # [n_values, n_model, n_sample, n_spatial]
 
-        key    = EQUATION_KEYS[self.config.equation]
+        key    = EQUATION_KEY[self.config.equation]
         errors = ((predictions-outputs)**2).mean(-1).numpy() # [n_values, n_model, n_sample]
         labels = np.meshgrid(EQUATION_VALUES, MODELS, np.arange(self.config.n_eval_sample))
      
@@ -399,12 +399,13 @@ class TrainerBase:
         os.makedirs(path, exist_ok=True)
         fig.savefig(os.path.join(path, f"varying.png"), dpi=300)
         fig.savefig(os.path.join(path, f"varying.pdf"), dpi=300)
+        plt.close(fig=fig)
 
     def table_varying_together(self, predictions, outputs):
         predictions = torch.stack(predictions, 0).reshape(len(EQUATION_VALUES), len(MODELS), self.config.n_eval_sample, self.config.n_eval_spatial) # [n_values, n_model, n_sample, n_spatial]
         outputs     = torch.stack(outputs,     0).reshape(len(EQUATION_VALUES), len(MODELS), self.config.n_eval_sample, self.config.n_eval_spatial) # [n_values, n_model, n_sample, n_spatial]
 
-        key    = EQUATION_KEYS[self.config.equation]
+        key    = EQUATION_KEY[self.config.equation]
         errors = ((predictions-outputs)**2).mean(-1).numpy() # [n_values, n_model, n_sample]
         errors_mean = errors.mean(-1) # [n_values, n_model]
         errors_std  = errors.std(-1)  # [n_values, n_model]
@@ -498,7 +499,7 @@ class TrainerBase:
             axes[irow, 0].axis('on')
             axes[irow, 0].set_xticks([])
             axes[irow, 0].set_yticks([])
-            axes[irow, 0].set_ylabel(f"{EQUATION_KEYS[self.config.equation]} = {EQUATION_VALUES[i]}", rotation=0, labelpad=60, fontsize=16)
+            axes[irow, 0].set_ylabel(f"{EQUATION_KEY[self.config.equation]} = {EQUATION_VALUES[i]}", rotation=0, labelpad=60, fontsize=16)
         if plot_error:
             for i, irow in enumerate(range(1, nrow, 2)):
                 axes[irow, 2].axis('on')
@@ -515,6 +516,8 @@ class TrainerBase:
         fig.savefig(os.path.join(path, f"predict.png"), dpi=300)
         fig.savefig(os.path.join(path, f"predict.pdf"), dpi=300)
 
+        plt.close(fig=fig)
+
     def table_prediction_together(self, predictions,  uTs):
 
         prediction = torch.stack(predictions, dim=0).reshape(len(EQUATION_VALUES), len(MODELS), -1) # [n_value, n_model, n_spatial]
@@ -523,7 +526,7 @@ class TrainerBase:
         error      = error.mean(-1) # [n_value, n_model]
 
         df = pd.DataFrame(error.numpy(), columns=MODELS, index=EQUATION_VALUES)
-        df.index.name = EQUATION_KEYS[self.config.equation]
+        df.index.name = EQUATION_KEY[self.config.equation]
 
         path = f"tables/{self.config.equation}"
         os.makedirs(path, exist_ok=True)

@@ -4,7 +4,7 @@ import re
 import argparse
 from tqdm import tqdm
 from itertools import product
-from config import use_file_config, EQUATIONS, EQUATION_VALUES, EQUATION_KEYS, MODELS
+from config import use_file_config, EQUATIONS, EQUATION_VALUES, EQUATION_KEY, MODELS
 from run_cmd import main, build_trainer
 from run_folder import walk_config
 
@@ -23,7 +23,7 @@ def run_plot_predict_together(model = None, overwrite = False):
         
         points, u0s, predictions, uTs = [], [], [], []
         for val, model in tqdm(product(EQUATION_VALUES, MODELS), total=len(EQUATION_VALUES) *  len(MODELS), desc="plot prediction"):
-            config_path = f"config/predict/{equation}_{EQUATION_KEYS[equation]}={val}/{model}.toml"
+            config_path = f"config/predict/{equation}_{EQUATION_KEY[equation]}={val}/{model}.toml"
             config  = use_file_config(config_path)
             trainer = build_trainer(config)
             trainer.load()
@@ -49,7 +49,7 @@ def run_table_predict_together(model = None, overwrite = False):
         
         predictions, uTs =  [], []
         for val, model in tqdm(product(EQUATION_VALUES, MODELS), total=len(EQUATION_VALUES) *  len(MODELS), desc="plot prediction"):
-            config_path = f"config/predict/{equation}_{EQUATION_KEYS[equation]}={val}/{model}.toml"
+            config_path = f"config/predict/{equation}_{EQUATION_KEY[equation]}={val}/{model}.toml"
             config  = use_file_config(config_path)
             trainer = build_trainer(config)
             trainer.load()
@@ -70,7 +70,7 @@ def run_plot_varying_together(model = None, overwrite = False):
     
         predictions, uTs = [], []
         for val, model in tqdm(product(EQUATION_VALUES, MODELS), total=len(EQUATION_VALUES) *  len(MODELS), desc="plot prediction"):
-            config_path = f"config/varying/{equation}_{EQUATION_KEYS[equation]}={val}/{model}.toml"
+            config_path = f"config/varying/{equation}_{EQUATION_KEY[equation]}={val}/{model}.toml"
             config  = use_file_config(config_path)
             trainer = build_trainer(config)
             trainer.load()
@@ -90,7 +90,7 @@ def run_table_varying_together(model = None, overwrite = False):
     
         predictions, uTs = [], []
         for val, model in tqdm(product(EQUATION_VALUES, MODELS), total=len(EQUATION_VALUES) *  len(MODELS), desc="plot prediction"):
-            config_path = f"config/varying/{equation}_{EQUATION_KEYS[equation]}={val}/{model}.toml"
+            config_path = f"config/varying/{equation}_{EQUATION_KEY[equation]}={val}/{model}.toml"
             config  = use_file_config(config_path)
             trainer = build_trainer(config)
             trainer.load()
