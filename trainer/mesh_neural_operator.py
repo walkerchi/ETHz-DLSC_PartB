@@ -27,7 +27,7 @@ class MeshNeuralOperatorDatasetGenerator(DatasetGeneratorBase):
     def __call__(self, n_sample, n_points, **kwargs):
         """
             can only use mesh sampler
-            inputs  [n_samples, 3, H, W] (x, y, u0)
+            inputs  [n_samples, 7, H, W] (x, y, u0)
             outputs [n_samples, 1, H, W] u(T, x, y, mu)
         """
         inputs = []
@@ -41,15 +41,15 @@ class MeshNeuralOperatorDatasetGenerator(DatasetGeneratorBase):
             equation    = self.Equation(**self.kwargs)
             u0          = equation(0,      *[points[i] for i in range(x_dim)])[None, ...] # [1, H, W]
             uT          = equation(self.T, *[points[i] for i in range(x_dim)])[None, ...] # [1, H, W]  
-            input       = torch.cat([points, 
-                                     torch.cos(2 * np.pi * points),
-                                     torch.sin(2 * np.pi * points),
-                                     u0], dim=0) #[3, H, W]
+            input       = torch.cat([points,
+                                      torch.cos(2 * np.pi * points),
+                                      torch.sin(2 * np.pi * points),
+                                      u0], dim=0) #[3, H, W]
             output      = uT
             inputs.append(input)
             outputs.append(output)
 
-        inputs  = torch.stack(inputs, dim=0)  # [n_samples, 3, H, W]
+        inputs  = torch.stack(inputs, dim=0)  # [n_samples, 7, H, W]
         outputs = torch.stack(outputs, dim=0) # [n_samples, 1, H, W]
        
         return inputs, outputs  
@@ -135,8 +135,7 @@ class MeshNeuralOperatorTrainer(TrainerBase):
    
         self.weight_path       = f"weights/{config.equation}_{'_'.join([f'{k}={v}' for k,v in equation_kwargs.items()])}/{config.model}"
         self.image_path        = f"images/{config.equation}_{'_'.join([f'{k}={v}' for k,v in equation_kwargs.items()])}/{config.model}"
-
-
+      
     def to(self, device):
         self.model = self.model.to(device)
         return self
@@ -178,12 +177,26 @@ class MeshNeuralOperatorTrainer(TrainerBase):
 
         return points, predictions, outputs
 
-    def plot_prediction(self, n_eval_spatial):
-        self.to(self.config.device)
 
+    def predict(self, n_eval_spatial):
+        """
+            Parameters:
+            -----------
+                n_eval_spatial: int, number of spatial points to evaluate
+
+            Returns:
+            --------
+                position:  torch.Tensor, shape=(n_eval_spatial, 2)
+                u0:      torch.Tensor, shape=(n_eval_spatial)
+                predictions: torch.Tensor, shape=(n_eval_spatial)
+                uT:     torch.Tensor, shape=(n_eval_spatial)
+        """
+        self.to(self.config.device)
+        set_seed(self.config.seed)
         input, output = self.dataset_generator(1, n_eval_spatial) # input (1, 3, H, W), output (1, 1, H, W)
         points = input[0, :2] # [2, H, W]
         points = points.reshape(2,-1)
+        u0     = input[0, -1] # [H, W]
         input = self.normalizer.norm_input(input)
         input = to_device(input, self.config.device)
 
@@ -191,7 +204,14 @@ class MeshNeuralOperatorTrainer(TrainerBase):
             prediction = self.model(input)
         prediction = self.normalizer.unorm_output(prediction) # [1, 1, H, W]
         prediction = prediction.cpu().flatten() # [H*W]
-        output     = output.flatten()     # [H*W]
+        output     = output.cpu().flatten()     # [H*W]
 
-        scatter_error2d(points[0], points[1], prediction, output, self.image_path, xlims=self.xlims,
-                        input = input[0, -1].flatten().cpu())
+        return points.T, u0.flatten().cpu(), prediction, output
+
+
+
+    def plot_prediction(self, n_eval_spatial):
+        points, u0, prediction, output = self.predict(n_eval_spatial)
+
+        scatter_error2d(points[:,0], points[:,1], prediction, output, self.image_path, xlims=self.xlims,
+                        u0 = u0)

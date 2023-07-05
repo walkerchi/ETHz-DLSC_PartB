@@ -30,8 +30,9 @@ class FFNDatasetGenerator(DatasetGeneratorBase):
         inputs = []
         outputs= []
         points_sampler = SpatialSampler(self.Equation, sampler=sampler)
+        
         x_dim = self.Equation.x_domain.shape[0]
-
+        
         for _ in range(n_sample):
             points   = points_sampler(n_points, flatten=True)
             equation = self.Equation(**self.kwargs)
@@ -106,7 +107,7 @@ class FFNTrainer(TrainerBase):
    
         self.weight_path       = f"weights/{config.equation}_{'_'.join([f'{k}={v}' for k,v in equation_kwargs.items()])}/ffn"
         self.image_path        = f"images/{config.equation}_{'_'.join([f'{k}={v}' for k,v in equation_kwargs.items()])}/ffn"
-    
+       
     def eval(self):
         """
             Returns:
@@ -129,7 +130,6 @@ class FFNTrainer(TrainerBase):
 
         with torch.no_grad():
             for input_batch, output_batch in dataloader:  
-                
                 prediction = general_call(self.model, input_batch) #[batch_size*n_eval_spatial, 1] 
                 prediction = self.normalizer.unorm_output(prediction).reshape([-1, config.n_eval_spatial]) # [batch_size, n_eval_spatial]
                 output_batch = self.normalizer.unorm_output(output_batch).reshape([-1, config.n_eval_spatial])
@@ -141,9 +141,21 @@ class FFNTrainer(TrainerBase):
 
         return points, predictions, outputs
 
-    def plot_prediction(self, n_eval_spatial):
-        self.to(self.config.device)
+    def predict(self, n_eval_spatial):
+        """
+            Parameters:
+            -----------
+                n_eval_spatial: int, number of spatial points to evaluate
 
+            Returns:
+            --------
+                points: torch.Tensor, shape=(n_eval_spatial, 2)
+                u0: torch.Tensor, shape=(n_eval_spatial)
+                prediction: torch.Tensor, shape=(n_eval_spatial)
+                uT: torch.Tensor, shape=(n_eval_spatial)
+        """
+        self.to(self.config.device)
+        set_seed(self.config.seed)
         input, output = self.dataset_generator(1, n_eval_spatial, sampler="mesh")
         points = input[:, :2]
         input = self.normalizer.norm_input(input)
@@ -152,4 +164,9 @@ class FFNTrainer(TrainerBase):
             prediction = self.model(input)
         prediction = self.normalizer.unorm_output(prediction).cpu()
 
-        scatter_error2d(points[:,0], points[:,1], prediction, output, self.image_path, self.xlims, input=input[:,-1].cpu())
+        return points.cpu(), None, prediction.flatten(), output.flatten().cpu()
+
+    def plot_prediction(self, n_eval_spatial):
+        points, u0, prediction, uT = self.predict(n_eval_spatial)
+
+        scatter_error2d(points[:,0], points[:,1], prediction, uT, self.image_path, self.xlims, u0=u0)

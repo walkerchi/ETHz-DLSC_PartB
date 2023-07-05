@@ -112,7 +112,7 @@ pin_memory      = true
 """
 
 def gen_train_config(batch_size=64):
-    for equation, v, model in tqdm(product(EQUATIONS, EQUATION_VALUES, MODELS), desc="generating training config"):
+    for equation, v, model in tqdm(product(EQUATIONS, EQUATION_VALUES, MODELS), total=len(EQUATIONS) *  len(MODELS) * len(EQUATION_VALUES), desc="generating training config"):
         config = gen_task("train"
                 )+ gen_model(model,
                     n_layers = CNO_N_LAYER if model == "cno" or model == "unet" 
@@ -134,8 +134,8 @@ def gen_train_config(batch_size=64):
         with open(os.path.join(dirpath, f"{model}.toml"), "w") as f:
             f.write(config)
 
-def gen_predict_config(batch_size=64):
-    for equation,v, model in tqdm(product(EQUATIONS, EQUATION_VALUES, MODELS), desc="generating predict config"):
+def gen_predict_config():
+    for equation,v,model in tqdm(product(EQUATIONS,EQUATION_VALUES, MODELS), total=len(EQUATIONS) *  len(MODELS) * len(EQUATION_VALUES), desc="generating predict config"):
         config = gen_task("predict"
                 )+ gen_model(model,
                     n_layers = CNO_N_LAYER if model == "cno" or model == "unet"
@@ -145,7 +145,7 @@ def gen_predict_config(batch_size=64):
                                 else DEFAULT_N_HIDDEN
                 ) + gen_equation(equation, 
                     EQUATION_T[equation],
-                    **{EQUATION_KEYS[equation]:v}
+                     **{EQUATION_KEYS[equation]:v}
                 ) + gen_predict(
                 ) + gen_device()
         dirpath = f"config/predict/{equation}_{EQUATION_KEYS[equation]}={v}"
@@ -154,7 +154,7 @@ def gen_predict_config(batch_size=64):
             f.write(config)
 
 def gen_varying_config(batch_size=64):
-    for equation, model in tqdm(product(EQUATIONS, MODELS), desc="generating varying config"):
+    for equation, v, model in tqdm(product(EQUATIONS, EQUATION_VALUES, MODELS),total=len(EQUATIONS) *  len(MODELS),  desc="generating varying config"):
         config = gen_task("varying"
                     )+ gen_model(model,
                         n_layers =CNO_N_LAYER if model == "cno" or model == "unet" 
@@ -163,13 +163,14 @@ def gen_varying_config(batch_size=64):
                                 else FFN_N_HIDDEN if model == "ffn"
                                 else DEFAULT_N_HIDDEN
                     ) + gen_equation(equation, 
-                        EQUATION_T[equation]
+                        EQUATION_T[equation],
+                         **{EQUATION_KEYS[equation]:v}
                     ) + gen_eval(
                             batch_size = batch_size * N_SPATIAL if model == "ffn" 
                             else int(batch_size * CNO_BATCH_SIZE_SCALE) if model  == "cno" or model == "unet"
                             else batch_size,
                     ) + gen_device()
-        dirpath = f"config/varying/{equation}"
+        dirpath = f"config/varying/{equation}_{EQUATION_KEYS[equation]}={v}"
         os.makedirs(dirpath, exist_ok=True)
         with open(os.path.join(dirpath, f"{model}.toml"), "w") as f:
             f.write(config)
@@ -179,7 +180,7 @@ def gen_config(batch_size=64):
         batch_size  = 64 for 2GB memory
     """
     gen_train_config(batch_size=batch_size)
-    gen_predict_config(batch_size=batch_size)
+    gen_predict_config()
     gen_varying_config(batch_size=batch_size)
 
 if __name__ == '__main__':

@@ -3,16 +3,19 @@ import pandas as pd
 import numpy as np
 import torch 
 import torch.nn as nn
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
 import random
 from tqdm import tqdm
 from torch.utils.data import DataLoader, TensorDataset
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from itertools import product
+
 
 from equations import EquationLookUp
 from models import ModelLookUp
-
+from config import MODELS,  EQUATION_KEYS, EQUATION_VALUES
 def set_seed(seed):
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -211,6 +214,7 @@ class TrainerBase:
         
         self.image_path       = None   # define at initialization
         self.weight_path      = None   # define at initialization
+        self.table_path       = None   # define at initialization
 
         self.normalizer       = None   # define at fit
 
@@ -362,20 +366,173 @@ class TrainerBase:
         for key, value in df.items():
             df[key] = np.concatenate(value)
         df = pd.DataFrame.from_dict(df)
-        # fig, ax = plt.subplots(figsize=(12,8))
-        # sns.stripplot(x=k, y="l2 error", data=df, 
-        #            alpha=0.1,marker="D", linewidth=1, ax=ax)
-        # sns.lineplot(x=k, y="l2 error", data=df, ax=ax)
+  
         path = f"images/{self.config.equation}/{self.config.model}"
       
         fig = sns.lmplot(x=k, y="l2 error", data=df, y_jitter=.02, logistic=True, truncate=False)
        
         os.makedirs(path, exist_ok=True)
-        fig.savefig(os.path.join(path, f"varying.png"), dpi=400)
-        fig.savefig(os.path.join(path, f"varying.pdf"), dpi=400)
+        fig.savefig(os.path.join(path, f"varying.png"), dpi=300)
+        fig.savefig(os.path.join(path, f"varying.pdf"), dpi=300)
 
-    def plot_prediction(self):
-        raise NotImplementedError()
+    def plot_varying_together(self, predictions, outputs):
+        predictions = torch.stack(predictions, 0).reshape(len(EQUATION_VALUES), len(MODELS), self.config.n_eval_sample, self.config.n_eval_spatial) # [n_values, n_model, n_sample, n_spatial]
+        outputs     = torch.stack(outputs,     0).reshape(len(EQUATION_VALUES), len(MODELS), self.config.n_eval_sample, self.config.n_eval_spatial) # [n_values, n_model, n_sample, n_spatial]
+
+        key    = EQUATION_KEYS[self.config.equation]
+        errors = ((predictions-outputs)**2).mean(-1).numpy() # [n_values, n_model, n_sample]
+        labels = np.meshgrid(EQUATION_VALUES, MODELS, np.arange(self.config.n_eval_sample))
+     
+        df = pd.DataFrame.from_dict({
+            key:labels[0].flatten(),
+            "Model":labels[1].flatten(),
+            "Sample":labels[2].flatten(),
+            "L2 Error":errors.flatten()
+        })
+
+        fig = sns.lmplot(x=key, y="L2 Error", hue="Model", data=df, 
+                         scatter = False,
+                         y_jitter=.02, logistic=True, truncate=False)
+        
+        path = f"images/{self.config.equation}"
+
+        os.makedirs(path, exist_ok=True)
+        fig.savefig(os.path.join(path, f"varying.png"), dpi=300)
+        fig.savefig(os.path.join(path, f"varying.pdf"), dpi=300)
+
+    def table_varying_together(self, predictions, outputs):
+        predictions = torch.stack(predictions, 0).reshape(len(EQUATION_VALUES), len(MODELS), self.config.n_eval_sample, self.config.n_eval_spatial) # [n_values, n_model, n_sample, n_spatial]
+        outputs     = torch.stack(outputs,     0).reshape(len(EQUATION_VALUES), len(MODELS), self.config.n_eval_sample, self.config.n_eval_spatial) # [n_values, n_model, n_sample, n_spatial]
+
+        key    = EQUATION_KEYS[self.config.equation]
+        errors = ((predictions-outputs)**2).mean(-1).numpy() # [n_values, n_model, n_sample]
+        errors_mean = errors.mean(-1) # [n_values, n_model]
+        errors_std  = errors.std(-1)  # [n_values, n_model]
+        data       = np.zeros_like(errors_mean, dtype=str)
+        for i,(mean,std) in enumerate(zip(errors_mean.flat, errors_std.flat)):
+            data.flat[i] = f"{mean:.2e} ($\pm$ {std:.2e})"
+        df = pd.DataFrame(data=data, columns=MODELS, index=EQUATION_VALUES)
+        df.index.name = key
+
+        path = f"tables/{self.config.equation}"
+
+        df.to_latex(os.path.join(path, "varying.tex"))
+        df.to_markdown(os.path.join(path, "varying.md"))
+        df.to_csv(os.path.join(path, "varying.csv"))
+
+    def plot_prediction_together(self, points, u0s, predictions,  uTs, plot_error=True):
+        
+        assert  len(points) == len(u0s) == len(predictions) == len(uTs) == len(MODELS) * len(EQUATION_VALUES)
+        nrow = len(EQUATION_VALUES) 
+        ncol = 1 + 1 + len(MODELS) # u0, uT, models
+        
+        prediction = torch.stack(predictions, dim=0).reshape(nrow, len(MODELS), -1) # [nrow, n_model, n_spatial]0
+        points = torch.stack([points[i*len(MODELS)] for i in range(nrow)], dim=0).reshape(nrow, -1, 2) # get the points for cno [nrow, n_spatial, 2]
+        uT = torch.stack([uTs[i*len(MODELS)] for i in range(nrow)], dim=0).reshape(nrow, -1) # get the uT for cno as col 1 [nrow, n_spatial]
+        u0 = torch.stack([u0s[i*len(MODELS)] for i in range(nrow)], dim=0).reshape(nrow, -1) # get the u0 for cno as col 0 [nrow, n_spatial]
+        error  = (prediction - uT[:, None, :])**2
+
+        if  plot_error:
+            nrow *= 2
+            row_iter = range(0, nrow, 2)
+        else:
+            row_iter = range(nrow)
+        fig, axes = plt.subplots(nrows=nrow, ncols=ncol, figsize=(2*ncol, 2*nrow))
+        for ax in axes.flat:
+            ax.axis("off")
+        
+
+        def add_right_cax(ax):
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes('right', size='5%', pad=0.05)
+            return cax 
+        
+        def add_left_cax(ax):
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes('left', size='5%', pad=0.05)
+            return cax
+
+
+        # u0
+        
+        for i,irow in enumerate(row_iter):
+            vmin,vmax = u0[i].min(), u0[i].max()
+            im = axes[irow, 0].scatter(points[i, :, 0], points[i, :, 1], c=u0[i], vmin=vmin, vmax=vmax, cmap="jet")
+            cax = add_left_cax(axes[irow, 0])
+            cbar = fig.colorbar(im, cax=cax)
+            cbar.ax.yaxis.set_ticks_position('left')
+
+        
+        for i,irow in enumerate(row_iter):
+            vmin_uT, vmax_uT = uT[i].min(), uT[i].max()
+            vmin_pr, vmax_pr = prediction[i].min(), prediction[i].max()
+            vmin, vmax = min(vmin_uT, vmin_pr), max(vmax_uT, vmax_pr)
+
+            # uT 
+            im = axes[irow, 1].scatter(points[i, :, 0], points[i, :, 1], c=uT[i], vmin=vmin, vmax=vmax, cmap="jet")
+
+            # prediction
+            for j,icol in enumerate(range(2,ncol)):
+                im = axes[irow, icol].scatter(points[i, :, 0], points[i, :, 1], c=prediction[i, j], vmin=vmin, vmax=vmax, cmap="jet")
+            cax = add_right_cax(axes[irow, -1])
+            fig.colorbar(im, cax=cax)
+       
+        if plot_error:
+            # error
+            
+            for i,irow  in enumerate(range(1, nrow, 2)):
+                vmin, vmax = error[i].min(), error[i].max()
+                for j,icol in enumerate(range(2,ncol)):
+                    im = axes[irow, icol].scatter(points[i, :, 0], points[i, :, 1], c=error[i, j], vmin=vmin, vmax=vmax, cmap="seismic")
+                cax = add_right_cax(axes[irow, -1])
+                fig.colorbar(im, cax=cax)
+        
+        # set column name
+        axes[0, 0].set_title("$u_0$", fontsize=18)
+        axes[0, 1].set_title("$u_T$", fontsize=18)
+        for icol, model in enumerate(MODELS):
+            axes[0, icol+2].set_title(model, fontsize=18)
+
+        # set row name
+        for i,irow in enumerate(row_iter):
+            axes[irow, 0].axis('on')
+            axes[irow, 0].set_xticks([])
+            axes[irow, 0].set_yticks([])
+            axes[irow, 0].set_ylabel(f"{EQUATION_KEYS[self.config.equation]} = {EQUATION_VALUES[i]}", rotation=0, labelpad=60, fontsize=16)
+        if plot_error:
+            for i, irow in enumerate(range(1, nrow, 2)):
+                axes[irow, 2].axis('on')
+                axes[irow, 2].set_xticks([])
+                axes[irow, 2].set_yticks([])
+                axes[irow, 2].set_ylabel(f"error", rotation=0, labelpad=30, fontsize=16)
+
+        # fig.tight_layout()
+       
+
+        path = f"images/{self.config.equation}"
+       
+        os.makedirs(path, exist_ok=True)
+        fig.savefig(os.path.join(path, f"predict.png"), dpi=300)
+        fig.savefig(os.path.join(path, f"predict.pdf"), dpi=300)
+
+    def table_prediction_together(self, predictions,  uTs):
+
+        prediction = torch.stack(predictions, dim=0).reshape(len(EQUATION_VALUES), len(MODELS), -1) # [n_value, n_model, n_spatial]
+        uT         = torch.stack(uTs,         dim=0).reshape(len(EQUATION_VALUES), len(MODELS), -1) # [n_value, n_model, n_spatial]
+        error      = (prediction - uT)**2 # [n_value, n_model, n_spatial]
+        error      = error.mean(-1) # [n_value, n_model]
+
+        df = pd.DataFrame(error.numpy(), columns=MODELS, index=EQUATION_VALUES)
+        df.index.name = EQUATION_KEYS[self.config.equation]
+
+        path = f"tables/{self.config.equation}"
+        os.makedirs(path, exist_ok=True)
+       
+        df.to_latex(os.path.join(path, "predict.tex"), float_format="%.2e")
+        df.to_markdown(os.path.join(path, "predict.md"))
+        df.to_csv(os.path.join(path, "predict.csv"))
+
+
 
     def save(self):
         self.normalizer.save(os.path.join(self.weight_path, "normalizer.pth"))

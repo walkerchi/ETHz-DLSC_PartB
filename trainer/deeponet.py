@@ -191,7 +191,7 @@ class DeepONetTrainer(TrainerBase):
    
         self.weight_path       = f"weights/{config.equation}_{'_'.join([f'{k}={v}' for k,v in equation_kwargs.items()])}/deeponet"
         self.image_path        = f"images/{config.equation}_{'_'.join([f'{k}={v}' for k,v in equation_kwargs.items()])}/deeponet"
-
+       
     def eval(self):
         """
             Returns:
@@ -229,10 +229,17 @@ class DeepONetTrainer(TrainerBase):
 
         return points, predictions, outputs
     
-    def plot_prediction(self, n_eval_spatial):
-        set_seed(self.config.seed)
+    def predict(self, n_eval_spatial):
+        """
+            Returns:
+            --------
+                position:  torch.Tensor, shape=(n_eval_spatial, 2)
+                u0:        torch.Tensor, shape=(n_basis)
+                prediction: torch.Tensor, shape=(n_eval_spatial)
+                uT:         torch.Tensor, shape=(n_eval_spatial)
+        """
         self.to(self.config.device)
-
+        set_seed(self.config.seed)
         branch, trunk, output = self.dataset_generator(1, n_eval_spatial) # branch, trunk, output
         if trunk.dim() == 3: # [2, H, W]
             points = trunk.reshape([2, -1]).T # [n_eval_spatial, 2]
@@ -246,9 +253,17 @@ class DeepONetTrainer(TrainerBase):
         if prediction.dim() == 3: #[1, H, W]
             prediction = prediction.flatten() #[H*W]
             output     = output.flatten()     #[H*W]
+
+
+        branch = branch.cpu().flatten()
+
+        return points, branch, prediction.flatten(), output.flatten()
     
-        scatter_error2d(points[:,0], points[:,1], prediction, output, self.image_path, xlims=self.xlims,
+    def plot_prediction(self, n_eval_spatial):
+        points, u0, prediction, uT = self.predict(n_eval_spatial)
+    
+        scatter_error2d(points[:,0], points[:,1], prediction, uT, self.image_path, xlims=self.xlims,
                         branch = (
-                        self.dataset_generator.basis_points[:,0].cpu(),
-                        self.dataset_generator.basis_points[:,1].cpu(),
-                        branch.cpu()))
+                        self.dataset_generator.basis_points[...,0].flatten().cpu(),
+                        self.dataset_generator.basis_points[...,1].flatten().cpu(),
+                        u0.cpu()))

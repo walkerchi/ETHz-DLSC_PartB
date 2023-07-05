@@ -1,5 +1,6 @@
+from itertools import product
 from trainer import FFNTrainer, DeepONetTrainer, MeshNeuralOperatorTrainer
-from config import use_cmd_config, EQUATION_VALUES, EQUATION_KEYS
+from config import use_cmd_config, EQUATION_VALUES, EQUATION_KEYS, MODELS
 
 
 def build_trainer(config):
@@ -21,8 +22,8 @@ def main(config):
     elif config.task == "predict":
         trainer = build_trainer(config)
         trainer.load()
-        trainer.plot_prediction(config.n_eval_spatial)
-    elif config.task == "varying":
+        trainer.predict(config.n_eval_spatial)
+    elif config.task == "plot_varying":
         eval_results = []
         k = EQUATION_KEYS[config.equation]
         for v in EQUATION_VALUES:
