@@ -7,6 +7,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
 import random
+from itertools import chain
 from tqdm import tqdm
 from torch.utils.data import DataLoader, TensorDataset
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -376,6 +377,7 @@ class TrainerBase:
         fig.savefig(os.path.join(path, f"varying.pdf"), dpi=300)
 
     def plot_varying_together(self, predictions, outputs):
+        sns.set(font_scale=1.5)
         predictions = torch.stack(predictions, 0).reshape(len(EQUATION_VALUES), len(MODELS), self.config.n_eval_sample, self.config.n_eval_spatial) # [n_values, n_model, n_sample, n_spatial]
         outputs     = torch.stack(outputs,     0).reshape(len(EQUATION_VALUES), len(MODELS), self.config.n_eval_sample, self.config.n_eval_spatial) # [n_values, n_model, n_sample, n_spatial]
 
@@ -399,7 +401,7 @@ class TrainerBase:
         os.makedirs(path, exist_ok=True)
         fig.savefig(os.path.join(path, f"varying.png"), dpi=300)
         fig.savefig(os.path.join(path, f"varying.pdf"), dpi=300)
-        plt.close(fig=fig)
+        
 
     def table_varying_together(self, predictions, outputs):
         predictions = torch.stack(predictions, 0).reshape(len(EQUATION_VALUES), len(MODELS), self.config.n_eval_sample, self.config.n_eval_spatial) # [n_values, n_model, n_sample, n_spatial]
@@ -421,17 +423,26 @@ class TrainerBase:
         df.to_markdown(os.path.join(path, "varying.md"))
         df.to_csv(os.path.join(path, "varying.csv"))
 
-    def plot_prediction_together(self, points, u0s, predictions,  uTs, plot_error=True):
-        
-        assert  len(points) == len(u0s) == len(predictions) == len(uTs) == len(MODELS) * len(EQUATION_VALUES)
-        nrow = len(EQUATION_VALUES) 
+    def plot_prediction_together(self, u0s, predictions,  uTs, plot_error=True):
+        values = list(u0s.keys())
+        nrow = len(values) 
         ncol = 1 + 1 + len(MODELS) # u0, uT, models
         
-        prediction = torch.stack(predictions, dim=0).reshape(nrow, len(MODELS), -1) # [nrow, n_model, n_spatial]0
-        points = torch.stack([points[i*len(MODELS)] for i in range(nrow)], dim=0).reshape(nrow, -1, 2) # get the points for cno [nrow, n_spatial, 2]
-        uT = torch.stack([uTs[i*len(MODELS)] for i in range(nrow)], dim=0).reshape(nrow, -1) # get the uT for cno as col 1 [nrow, n_spatial]
-        u0 = torch.stack([u0s[i*len(MODELS)] for i in range(nrow)], dim=0).reshape(nrow, -1) # get the u0 for cno as col 0 [nrow, n_spatial]
+        predictions = list(chain.from_iterable(predictions.values()))
+        uTs         = list(chain.from_iterable(uTs.values()))
+        u0s         = list(chain.from_iterable(u0s.values()))
+        # breakpoint()
+        prediction = torch.stack(predictions, dim=0).reshape(nrow, len(MODELS), -1) # [nrow, n_model, n_spatial]
+        uT = torch.stack([uTs[i*len(MODELS)+2] for i in range(nrow)], dim=0).reshape(nrow, -1) # get the uT for cno as col 1 [nrow, n_spatial]
+        u0 = torch.stack([u0s[i*len(MODELS)+2] for i in range(nrow)], dim=0).reshape(nrow, -1) # get the u0 for cno as col 0 [nrow, n_spatial]
         error  = (prediction - uT[:, None, :])**2
+
+        mesh_axis = int(np.sqrt(self.config.n_eval_spatial))
+        assert mesh_axis * mesh_axis == self.config.n_eval_spatial
+        prediction = prediction.reshape(nrow, len(MODELS), mesh_axis, mesh_axis)
+        uT         = uT.reshape(nrow, mesh_axis, mesh_axis)
+        u0         = u0.reshape(nrow, mesh_axis, mesh_axis)
+        error      = error.reshape(nrow, len(MODELS), mesh_axis, mesh_axis)
 
         if  plot_error:
             nrow *= 2
@@ -458,7 +469,7 @@ class TrainerBase:
         
         for i,irow in enumerate(row_iter):
             vmin,vmax = u0[i].min(), u0[i].max()
-            im = axes[irow, 0].scatter(points[i, :, 0], points[i, :, 1], c=u0[i], vmin=vmin, vmax=vmax, cmap="jet")
+            im = axes[irow, 0].imshow(u0[i], vmin=vmin, vmax=vmax, cmap="jet")
             cax = add_left_cax(axes[irow, 0])
             cbar = fig.colorbar(im, cax=cax)
             cbar.ax.yaxis.set_ticks_position('left')
@@ -470,11 +481,11 @@ class TrainerBase:
             vmin, vmax = min(vmin_uT, vmin_pr), max(vmax_uT, vmax_pr)
 
             # uT 
-            im = axes[irow, 1].scatter(points[i, :, 0], points[i, :, 1], c=uT[i], vmin=vmin, vmax=vmax, cmap="jet")
-
+            im = axes[irow, 1].imshow(uT[i], vmin=vmin, vmax=vmax, cmap="jet")
             # prediction
             for j,icol in enumerate(range(2,ncol)):
-                im = axes[irow, icol].scatter(points[i, :, 0], points[i, :, 1], c=prediction[i, j], vmin=vmin, vmax=vmax, cmap="jet")
+                im = axes[irow, icol].imshow(prediction[i, j], vmin=vmin, vmax=vmax, cmap="jet")
+        
             cax = add_right_cax(axes[irow, -1])
             fig.colorbar(im, cax=cax)
        
@@ -484,7 +495,8 @@ class TrainerBase:
             for i,irow  in enumerate(range(1, nrow, 2)):
                 vmin, vmax = error[i].min(), error[i].max()
                 for j,icol in enumerate(range(2,ncol)):
-                    im = axes[irow, icol].scatter(points[i, :, 0], points[i, :, 1], c=error[i, j], vmin=vmin, vmax=vmax, cmap="seismic")
+                    im = axes[irow, icol].imshow(error[i, j], vmin=vmin, vmax=vmax, cmap="seismic")
+                   
                 cax = add_right_cax(axes[irow, -1])
                 fig.colorbar(im, cax=cax)
         
@@ -499,7 +511,7 @@ class TrainerBase:
             axes[irow, 0].axis('on')
             axes[irow, 0].set_xticks([])
             axes[irow, 0].set_yticks([])
-            axes[irow, 0].set_ylabel(f"{EQUATION_KEY[self.config.equation]} = {EQUATION_VALUES[i]}", rotation=0, labelpad=60, fontsize=16)
+            axes[irow, 0].set_ylabel(f"{EQUATION_KEY[self.config.equation]} = {values[i]}", rotation=0, labelpad=60, fontsize=16)
         if plot_error:
             for i, irow in enumerate(range(1, nrow, 2)):
                 axes[irow, 2].axis('on')
@@ -513,8 +525,14 @@ class TrainerBase:
         path = f"images/{self.config.equation}"
        
         os.makedirs(path, exist_ok=True)
-        fig.savefig(os.path.join(path, f"predict.png"), dpi=300)
-        fig.savefig(os.path.join(path, f"predict.pdf"), dpi=300)
+
+        if EQUATION_VALUES == values:
+            fig.savefig(os.path.join(path, f"predict.png"), dpi=300)
+            fig.savefig(os.path.join(path, f"predict.pdf"), dpi=300)
+        else:
+            assert len(values) == 1
+            fig.savefig(os.path.join(path, f"predict_{EQUATION_KEY[self.config.equation]}={values[0]}.png"), dpi=300)
+            fig.savefig(os.path.join(path, f"predict_{EQUATION_KEY[self.config.equation]}={values[0]}.pdf"), dpi=300)
 
         plt.close(fig=fig)
 

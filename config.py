@@ -7,7 +7,7 @@ import yaml
 
 TASKS = ["train","predict","varying"]
 SAMPLERS = ["mesh", "sobol", "uniform"]
-MODELS = ["cno","ffn","deeponet","fno","kno","unet"]
+MODELS = ["ffn","deeponet","fno","cno", "unet", "kno"]
 EQUATIONS = ["heat","wave","poisson"]
 EQUATION_KEY = {
     "heat":"d",
