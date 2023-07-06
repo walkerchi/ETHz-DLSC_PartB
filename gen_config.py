@@ -113,7 +113,7 @@ pin_memory      = true
 def gen_train_config(batch_size=64):
     n_spatial = 4096
     n_sample  = 64
-    for equation, v, model in tqdm(product(EQUATIONS, EQUATION_VALUES, MODELS), total=len(EQUATIONS) *  len(MODELS) * len(EQUATION_VALUES), desc="generating training config"):
+    for equation, v, n_spatial, model in tqdm(product(EQUATIONS, EQUATION_VALUES, SPATIAL_SAMPLINGS, MODELS), total=len(EQUATIONS) *  len(MODELS) * len(EQUATION_VALUES), desc="generating training config"):
         config = gen_task("train"
                 )+ gen_model(model,
                     n_layers = CNO_N_LAYER if model == "cno" or model == "unet" 
@@ -135,13 +135,13 @@ def gen_train_config(batch_size=64):
                             else int(batch_size * CNO_BATCH_SIZE_SCALE) if model  == "cno" or model == "unet"
                             else batch_size,
                 ) + gen_device()
-        dirpath = f"config/train/{equation}_{EQUATION_KEY[equation]}={v}"
+        dirpath = f"config/train/{equation}_{EQUATION_KEY[equation]}={v}/spatial={n_spatial}"
         os.makedirs(dirpath, exist_ok=True)
         with open(os.path.join(dirpath, f"{model}.toml"), "w") as f:
             f.write(config)
 
 def gen_predict_config():
-    for equation,v,model in tqdm(product(EQUATIONS,EQUATION_VALUES, MODELS), total=len(EQUATIONS) *  len(MODELS) * len(EQUATION_VALUES), desc="generating predict config"):
+    for equation,v, n_spatial, model in tqdm(product(EQUATIONS,EQUATION_VALUES, SPATIAL_SAMPLINGS, MODELS), total=len(EQUATIONS) *  len(MODELS) * len(EQUATION_VALUES), desc="generating predict config"):
         config = gen_task("predict"
                 )+ gen_model(model,
                     n_layers = CNO_N_LAYER if model == "cno" or model == "unet"
@@ -154,14 +154,14 @@ def gen_predict_config():
                      **{EQUATION_KEY[equation]:v}
                 ) + gen_predict(
                 ) + gen_device()
-        dirpath = f"config/predict/{equation}_{EQUATION_KEY[equation]}={v}"
+        dirpath = f"config/predict/{equation}_{EQUATION_KEY[equation]}={v}/spatial={n_spatial}"
         os.makedirs(dirpath, exist_ok=True)
         with open(os.path.join(dirpath, f"{model}.toml"), "w") as f:
             f.write(config)
 
 def gen_varying_config(batch_size=64):
     n_spatial = 4096
-    for equation, v, model in tqdm(product(EQUATIONS, EQUATION_VALUES, MODELS),total=len(EQUATIONS) *  len(MODELS),  desc="generating varying config"):
+    for equation, v, n_spatial, model in tqdm(product(EQUATIONS, EQUATION_VALUES, SPATIAL_SAMPLINGS, MODELS),total=len(EQUATIONS) *  len(MODELS),  desc="generating varying config"):
         config = gen_task("varying"
                     )+ gen_model(model,
                         n_layers =CNO_N_LAYER if model == "cno" or model == "unet" 
@@ -179,7 +179,7 @@ def gen_varying_config(batch_size=64):
                             else int(batch_size * CNO_BATCH_SIZE_SCALE) if model  == "cno" or model == "unet"
                             else batch_size,
                     ) + gen_device()
-        dirpath = f"config/varying/{equation}_{EQUATION_KEY[equation]}={v}"
+        dirpath = f"config/varying/{equation}_{EQUATION_KEY[equation]}={v}/spatial={n_spatial}"
         os.makedirs(dirpath, exist_ok=True)
         with open(os.path.join(dirpath, f"{model}.toml"), "w") as f:
             f.write(config)
