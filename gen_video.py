@@ -12,7 +12,7 @@ from tqdm import tqdm
 from itertools import product
 
 from equations import HeatEquation, WaveEquation, EquationLookUp
-from config import EQUATION_KEYS, EQUATION_VALUES, EQUATIONS
+from config import EQUATION_KEY, EQUATION_VALUES, EQUATIONS
 
 EQUATION_TIME = {
     "heat": 0.02,
@@ -31,7 +31,7 @@ def generate_video(spatial_resolution = 64 * 64, time_resolution = 100):
             torch.linspace(-1, 1, int(np.sqrt(spatial_resolution))),
             torch.linspace(-1, 1, int(np.sqrt(spatial_resolution)))
         )
-        k = EQUATION_KEYS[equation]
+        k = EQUATION_KEY[equation]
         if equation == "poisson":
             # not dependent on time
             fig, ax = plt.subplots(ncols=2, figsize=(12,6))
