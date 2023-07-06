@@ -15,7 +15,7 @@ from itertools import product
 
 from equations import EquationLookUp
 from models import ModelLookUp
-from config import MODELS,  EQUATION_KEY, EQUATION_VALUES
+from config import MODELS,  EQUATION_KEY, EQUATION_VALUES, SPATIAL_SAMPLINGS
 def set_seed(seed):
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -376,22 +376,21 @@ class TrainerBase:
         fig.savefig(os.path.join(path, f"varying.pdf"), dpi=300)
 
     def plot_varying_together(self, predictions, outputs):
-        predictions = torch.stack(predictions, 0).reshape(len(EQUATION_VALUES), len(MODELS), self.config.n_eval_sample, self.config.n_eval_spatial) # [n_values, n_model, n_sample, n_spatial]
-        outputs     = torch.stack(outputs,     0).reshape(len(EQUATION_VALUES), len(MODELS), self.config.n_eval_sample, self.config.n_eval_spatial) # [n_values, n_model, n_sample, n_spatial]
+        errors = torch.stack([((x-y)**2).mean(-1) for x,y in zip(predictions, outputs)], 0).reshape(len(EQUATION_VALUES), len(SPATIAL_SAMPLINGS), len(MODELS), self.config.n_eval_sample) # [n_values, spatial_sampling, n_model, n_sample]
 
         key    = EQUATION_KEY[self.config.equation]
-        errors = ((predictions-outputs)**2).mean(-1).numpy() # [n_values, n_model, n_sample]
-        labels = np.meshgrid(EQUATION_VALUES, MODELS, np.arange(self.config.n_eval_sample))
+        labels = np.meshgrid(EQUATION_VALUES, SPATIAL_SAMPLINGS, MODELS, np.arange(self.config.n_eval_sample))
      
         df = pd.DataFrame.from_dict({
             key:labels[0].flatten(),
-            "Model":labels[1].flatten(),
-            "Sample":labels[2].flatten(),
+            "Spatial":labels[1].flatten(),
+            "Model":labels[2].flatten(),
+            "Sample":labels[3].flatten(),
             "L2 Error":errors.flatten()
         })
 
-        fig = sns.lmplot(x=key, y="L2 Error", hue="Model", data=df, 
-                         scatter = False,
+        fig = sns.lmplot(x=key, y="L2 Error", hue="Spatial", col="Model", data=df, 
+                         scatter = False, 
                          y_jitter=.02, logistic=True, truncate=False)
         
         path = f"images/{self.config.equation}"
@@ -402,17 +401,18 @@ class TrainerBase:
         plt.close(fig=fig)
 
     def table_varying_together(self, predictions, outputs):
-        predictions = torch.stack(predictions, 0).reshape(len(EQUATION_VALUES), len(MODELS), self.config.n_eval_sample, self.config.n_eval_spatial) # [n_values, n_model, n_sample, n_spatial]
-        outputs     = torch.stack(outputs,     0).reshape(len(EQUATION_VALUES), len(MODELS), self.config.n_eval_sample, self.config.n_eval_spatial) # [n_values, n_model, n_sample, n_spatial]
-
+        errors = torch.stack([((x-y)**2).mean(-1) for x,y in zip(predictions, outputs)], 0).reshape(len(EQUATION_VALUES), len(SPATIAL_SAMPLINGS), len(MODELS), self.config.n_eval_sample) # [n_values, spatial, n_model, n_sample]
+        
         key    = EQUATION_KEY[self.config.equation]
-        errors = ((predictions-outputs)**2).mean(-1).numpy() # [n_values, n_model, n_sample]
-        errors_mean = errors.mean(-1) # [n_values, n_model]
-        errors_std  = errors.std(-1)  # [n_values, n_model]
+        errors_mean = errors.mean(-1) # [n_values, spatial, n_model]
+        errors_std  = errors.std(-1)  # [n_values, spatial, n_model]
+        errors_mean = errors_mean.transpose(0, 2, 1).reshape(len(EQUATION_VALUES), len(MODELS) * len(SPATIAL_SAMPLINGS)) # [n_values, n_model * spatial]
+        errors_std  = errors_std.transpose(0, 2, 1).reshape(len(EQUATION_VALUES),  len(MODELS) * len(SPATIAL_SAMPLINGS))  # [n_values, n_model * spatial]
         data       = np.zeros_like(errors_mean, dtype=str)
         for i,(mean,std) in enumerate(zip(errors_mean.flat, errors_std.flat)):
             data.flat[i] = f"{mean:.2e} ($\pm$ {std:.2e})"
-        df = pd.DataFrame(data=data, columns=MODELS, index=EQUATION_VALUES)
+        columns = [(model, spatial) for model, spatial in product(MODELS, SPATIAL_SAMPLINGS)]
+        df = pd.DataFrame(data=data, columns=columns, index=EQUATION_VALUES)
         df.index.name = key
 
         path = f"tables/{self.config.equation}"
@@ -421,28 +421,29 @@ class TrainerBase:
         df.to_markdown(os.path.join(path, "varying.md"))
         df.to_csv(os.path.join(path, "varying.csv"))
 
-    def plot_prediction_together(self, points, u0s, predictions,  uTs, plot_error=True):
+    def plot_prediction_together(self, u0s, predictions,  uTs):
         
-        assert  len(points) == len(u0s) == len(predictions) == len(uTs) == len(MODELS) * len(EQUATION_VALUES)
-        nrow = len(EQUATION_VALUES) 
-        ncol = 1 + 1 + len(MODELS) # u0, uT, models
+        nrow = len(SPATIAL_SAMPLINGS)         # for different spatial sampling
+        ncol = 1 + 1 + len(MODELS)      # u0, uT, models
         
-        prediction = torch.stack(predictions, dim=0).reshape(nrow, len(MODELS), -1) # [nrow, n_model, n_spatial]0
-        points = torch.stack([points[i*len(MODELS)] for i in range(nrow)], dim=0).reshape(nrow, -1, 2) # get the points for cno [nrow, n_spatial, 2]
-        uT = torch.stack([uTs[i*len(MODELS)] for i in range(nrow)], dim=0).reshape(nrow, -1) # get the uT for cno as col 1 [nrow, n_spatial]
-        u0 = torch.stack([u0s[i*len(MODELS)] for i in range(nrow)], dim=0).reshape(nrow, -1) # get the u0 for cno as col 0 [nrow, n_spatial]
-        error  = (prediction - uT[:, None, :])**2
+        prediction = torch.stack(predictions).reshape([nrow, len(MODELS), -1], 0) # [nrow, n_model, n_spatial]
+        u0         = torch.stack([u0s[i * len(MODELS)] for i in range(nrow)],0)    # [nrow, n_spatial]
+        uT         = torch.stack([uTs[i * len(MODELS)] for i in range(nrow)],0)    # [nrow, n_spatial]
+        error  = (prediction - uT[:, None, :])**2  # [nrow, n_model, n_spatial]
+        assert self.config.n_eval_spatial == error.shape[-1]
+        mesh_axis = int(np.sqrt(self.config.n_eval_spatial))
+        assert mesh_axis * mesh_axis == self.config.n_eval_spatial
+        prediction = prediction.reshape(nrow, len(MODELS), mesh_axis, mesh_axis) # [nrow, n_model, mesh_axis, mesh_axis]
+        u0         = u0.reshape(        nrow, len(MODELS), mesh_axis, mesh_axis) # [nrow, n_model, mesh_axis, mesh_axis]
+        uT         = uT.reshape(        nrow, len(MODELS), mesh_axis, mesh_axis) # [nrow, n_model, mesh_axis, mesh_axis]
+        error      = error.reshape(     nrow, len(MODELS), mesh_axis, mesh_axis) # [nrow, n_model, mesh_axis, mesh_axis]
 
-        if  plot_error:
-            nrow *= 2
-            row_iter = range(0, nrow, 2)
-        else:
-            row_iter = range(nrow)
+        nrow *= 2  # add error row
+      
         fig, axes = plt.subplots(nrows=nrow, ncols=ncol, figsize=(2*ncol, 2*nrow))
         for ax in axes.flat:
             ax.axis("off")
         
-
         def add_right_cax(ax):
             divider = make_axes_locatable(ax)
             cax = divider.append_axes('right', size='5%', pad=0.05)
@@ -453,40 +454,39 @@ class TrainerBase:
             cax = divider.append_axes('left', size='5%', pad=0.05)
             return cax
 
-
         # u0
         
-        for i,irow in enumerate(row_iter):
+        for i,irow in enumerate(range(0, nrow, 2)):
             vmin,vmax = u0[i].min(), u0[i].max()
-            im = axes[irow, 0].scatter(points[i, :, 0], points[i, :, 1], c=u0[i], vmin=vmin, vmax=vmax, cmap="jet")
+            im = axes[irow, 0].imshow(u0[i], vmin=vmin, vmax=vmax, cmap="jet")
             cax = add_left_cax(axes[irow, 0])
             cbar = fig.colorbar(im, cax=cax)
             cbar.ax.yaxis.set_ticks_position('left')
 
         
-        for i,irow in enumerate(row_iter):
+        for i,irow in enumerate(range(0, nrow, 2)):
             vmin_uT, vmax_uT = uT[i].min(), uT[i].max()
             vmin_pr, vmax_pr = prediction[i].min(), prediction[i].max()
             vmin, vmax = min(vmin_uT, vmin_pr), max(vmax_uT, vmax_pr)
 
             # uT 
-            im = axes[irow, 1].scatter(points[i, :, 0], points[i, :, 1], c=uT[i], vmin=vmin, vmax=vmax, cmap="jet")
-
+            im = axes[irow, 1].imshow(uT[i], vmin=vmin, vmax=vmax, cmap="jet")
+        
             # prediction
             for j,icol in enumerate(range(2,ncol)):
-                im = axes[irow, icol].scatter(points[i, :, 0], points[i, :, 1], c=prediction[i, j], vmin=vmin, vmax=vmax, cmap="jet")
+                im = axes[irow, icol].imshow(prediction[i, j], vmin=vmin, vmax=vmax, cmap="jet")
+        
             cax = add_right_cax(axes[irow, -1])
             fig.colorbar(im, cax=cax)
        
-        if plot_error:
-            # error
-            
-            for i,irow  in enumerate(range(1, nrow, 2)):
-                vmin, vmax = error[i].min(), error[i].max()
-                for j,icol in enumerate(range(2,ncol)):
-                    im = axes[irow, icol].scatter(points[i, :, 0], points[i, :, 1], c=error[i, j], vmin=vmin, vmax=vmax, cmap="seismic")
-                cax = add_right_cax(axes[irow, -1])
-                fig.colorbar(im, cax=cax)
+        
+        # error
+        for i,irow  in enumerate(range(1, nrow, 2)):
+            vmin, vmax = error[i].min(), error[i].max()
+            for j,icol in enumerate(range(2,ncol)):
+                im = axes[irow, icol].imshow(error[i, j], vmin=vmin, vmax=vmax, cmap="seismic")
+            cax = add_right_cax(axes[irow, -1])
+            fig.colorbar(im, cax=cax)
         
         # set column name
         axes[0, 0].set_title("$u_0$", fontsize=18)
@@ -495,22 +495,22 @@ class TrainerBase:
             axes[0, icol+2].set_title(model, fontsize=18)
 
         # set row name
-        for i,irow in enumerate(row_iter):
+        samplings = list(predictions.keys())
+        for i,irow in enumerate(range(0, nrow, 2)):
             axes[irow, 0].axis('on')
             axes[irow, 0].set_xticks([])
             axes[irow, 0].set_yticks([])
-            axes[irow, 0].set_ylabel(f"{EQUATION_KEY[self.config.equation]} = {EQUATION_VALUES[i]}", rotation=0, labelpad=60, fontsize=16)
-        if plot_error:
-            for i, irow in enumerate(range(1, nrow, 2)):
-                axes[irow, 2].axis('on')
-                axes[irow, 2].set_xticks([])
-                axes[irow, 2].set_yticks([])
-                axes[irow, 2].set_ylabel(f"error", rotation=0, labelpad=30, fontsize=16)
+            axes[irow, 0].set_ylabel(f"spatial = {samplings[i]}", rotation=0, labelpad=70, fontsize=16)
+      
+        for i, irow in enumerate(range(1, nrow, 2)):
+            axes[irow, 2].axis('on')
+            axes[irow, 2].set_xticks([])
+            axes[irow, 2].set_yticks([])
+            axes[irow, 2].set_ylabel(f"error", rotation=0, labelpad=30, fontsize=16)
 
-        # fig.tight_layout()
-       
-
-        path = f"images/{self.config.equation}"
+        key  = EQUATION_KEY[self.config.equation]
+        value= self.config[key]
+        path = f"images/{self.config.equation}_{key}={value}/spatial={self.config.n_train_spatial}"
        
         os.makedirs(path, exist_ok=True)
         fig.savefig(os.path.join(path, f"predict.png"), dpi=300)
@@ -519,16 +519,14 @@ class TrainerBase:
         plt.close(fig=fig)
 
     def table_prediction_together(self, predictions,  uTs):
+        errors     = torch.stack([((x-y)**2).mean(-1) for x,y in zip(predictions, uTs)], 0) # [n_value, spatial_sampling, n_model]
+        errors     = errors.numpy().permute(0, 2, 1).reshape(len(EQUATION_VALUES), len(MODELS)*len(SPATIAL_SAMPLINGS)) # [n_value, n_model*spatial_sampling]
+        columns    = [(model, spatial_sampling) for model, spatial_sampling in product(MODELS, SPATIAL_SAMPLINGS)]
 
-        prediction = torch.stack(predictions, dim=0).reshape(len(EQUATION_VALUES), len(MODELS), -1) # [n_value, n_model, n_spatial]
-        uT         = torch.stack(uTs,         dim=0).reshape(len(EQUATION_VALUES), len(MODELS), -1) # [n_value, n_model, n_spatial]
-        error      = (prediction - uT)**2 # [n_value, n_model, n_spatial]
-        error      = error.mean(-1) # [n_value, n_model]
-
-        df = pd.DataFrame(error.numpy(), columns=MODELS, index=EQUATION_VALUES)
+        df = pd.DataFrame(errors, columns=columns, index=EQUATION_VALUES)
         df.index.name = EQUATION_KEY[self.config.equation]
 
-        path = f"tables/{self.config.equation}"
+        path = f"tables/{self.config.equation}/spatial={self.config.n_train_spatial}"
         os.makedirs(path, exist_ok=True)
        
         df.to_latex(os.path.join(path, "predict.tex"), float_format="%.2e")

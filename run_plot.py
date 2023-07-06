@@ -4,7 +4,8 @@ import re
 import argparse
 from tqdm import tqdm
 from itertools import product
-from config import use_file_config, EQUATIONS, EQUATION_VALUES, EQUATION_KEY, MODELS
+from collections import OrderedDict
+from config import use_file_config, EQUATIONS, EQUATION_VALUES, EQUATION_KEY, MODELS, SPATIAL_SAMPLINGS
 from run_cmd import main, build_trainer
 from run_folder import walk_config
 
@@ -20,19 +21,22 @@ def run_plot_predict_together(model = None, overwrite = False):
         if not overwrite and os.path.exists(image_path):
             print(f"skipping '{equation}' because '{image_path}' already exists")
             continue
-        
-        points, u0s, predictions, uTs = [], [], [], []
-        for val, model in tqdm(product(EQUATION_VALUES, MODELS), total=len(EQUATION_VALUES) *  len(MODELS), desc="plot prediction"):
-            config_path = f"config/predict/{equation}_{EQUATION_KEY[equation]}={val}/{model}.toml"
-            config  = use_file_config(config_path)
-            trainer = build_trainer(config)
-            trainer.load()
-            point, u0, prediction, uT = trainer.predict(config.n_eval_spatial)
-            points.append(point)
-            u0s.append(u0)
-            predictions.append(prediction)
-            uTs.append(uT)
-        trainer.plot_prediction_together(points, u0s, predictions, uTs)
+
+        p = tqdm(total=len(EQUATION_VALUES) * len(MODELS) * len(SPATIAL_SAMPLINGS), desc="plot prediction")
+        for val in EQUATION_VALUES:
+            u0s, predictions, uTs = [], [], []
+            for n_spatial,  model in SPATIAL_SAMPLINGS:
+                for model  in MODELS:
+                    config_path = f"config/predict/{equation}_{EQUATION_KEY[equation]}={val}/spatial={n_spatial}/{model}.toml"
+                    config  = use_file_config(config_path)
+                    trainer = build_trainer(config)
+                    trainer.load()
+                    _, u0, prediction, uT = trainer.predict(config.n_eval_spatial)
+                    u0s.append(u0)
+                    predictions.append(prediction)
+                    uTs.append(uT)
+                    p.update(1)
+            trainer.plot_prediction_together(u0s, predictions, uTs)
       
 
 def run_table_predict_together(model = None, overwrite = False):
@@ -48,8 +52,8 @@ def run_table_predict_together(model = None, overwrite = False):
             continue
         
         predictions, uTs =  [], []
-        for val, model in tqdm(product(EQUATION_VALUES, MODELS), total=len(EQUATION_VALUES) *  len(MODELS), desc="plot prediction"):
-            config_path = f"config/predict/{equation}_{EQUATION_KEY[equation]}={val}/{model}.toml"
+        for val, n_spatial, model in tqdm(product(EQUATION_VALUES,SPATIAL_SAMPLINGS, MODELS), total=len(EQUATION_VALUES) *  len(MODELS) * len(SPATIAL_SAMPLINGS), desc="plot prediction"):
+            config_path = f"config/predict/{equation}_{EQUATION_KEY[equation]}={val}/spatial={n_spatial}/{model}.toml"
             config  = use_file_config(config_path)
             trainer = build_trainer(config)
             trainer.load()
@@ -69,8 +73,8 @@ def run_plot_varying_together(model = None, overwrite = False):
             continue
     
         predictions, uTs = [], []
-        for val, model in tqdm(product(EQUATION_VALUES, MODELS), total=len(EQUATION_VALUES) *  len(MODELS), desc="plot prediction"):
-            config_path = f"config/varying/{equation}_{EQUATION_KEY[equation]}={val}/{model}.toml"
+        for val, n_spatial, model in tqdm(product(EQUATION_VALUES, SPATIAL_SAMPLINGS, MODELS), total=len(EQUATION_VALUES) * len(SPATIAL_SAMPLINGS) * len(MODELS), desc="plot prediction"):
+            config_path = f"config/varying/{equation}_{EQUATION_KEY[equation]}={val}/spatial={n_spatial}/{model}.toml"
             config  = use_file_config(config_path)
             trainer = build_trainer(config)
             trainer.load()
@@ -89,8 +93,8 @@ def run_table_varying_together(model = None, overwrite = False):
             continue
     
         predictions, uTs = [], []
-        for val, model in tqdm(product(EQUATION_VALUES, MODELS), total=len(EQUATION_VALUES) *  len(MODELS), desc="plot prediction"):
-            config_path = f"config/varying/{equation}_{EQUATION_KEY[equation]}={val}/{model}.toml"
+        for val,n_spatial, model in tqdm(product(EQUATION_VALUES,SPATIAL_SAMPLINGS, MODELS), total=len(EQUATION_VALUES) * len(SPATIAL_SAMPLINGS) * len(MODELS), desc="plot prediction"):
+            config_path = f"config/varying/{equation}_{EQUATION_KEY[equation]}={val}/spatial={n_spatial}/{model}.toml"
             config  = use_file_config(config_path)
             trainer = build_trainer(config)
             trainer.load()
