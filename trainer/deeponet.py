@@ -189,8 +189,8 @@ class DeepONetTrainer(TrainerBase):
                                         branch_arch     = config.branch_arch,
                                         trunk_arch      = config.trunk_arch)
    
-        self.weight_path       = f"weights/{config.equation}_{'_'.join([f'{k}={v}' for k,v in equation_kwargs.items()])}/deeponet"
-        self.image_path        = f"images/{config.equation}_{'_'.join([f'{k}={v}' for k,v in equation_kwargs.items()])}/deeponet"
+        self.weight_path       = f"weights/{config.equation}_{'_'.join([f'{k}={v}' for k,v in equation_kwargs.items()])}/spatial={self.config.n_train_spatial}/deeponet"
+        self.image_path        = f"images/{config.equation}_{'_'.join([f'{k}={v}' for k,v in equation_kwargs.items()])}/spatial={self.config.n_train_spatial}/deeponet"
        
     def eval(self):
         """

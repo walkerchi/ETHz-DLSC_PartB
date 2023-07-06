@@ -29,6 +29,7 @@ class FFNDatasetGenerator(DatasetGeneratorBase):
         """
         inputs = []
         outputs= []
+        self.u0 = []
         points_sampler = SpatialSampler(self.Equation, sampler=sampler)
         
         x_dim = self.Equation.x_domain.shape[0]
@@ -38,6 +39,7 @@ class FFNDatasetGenerator(DatasetGeneratorBase):
             equation = self.Equation(**self.kwargs)
             input    = torch.cat([points, equation.variable.flatten()[None,:].tile(points.shape[0],1)], -1) #[n_points, 2 + d]
             output   = equation(self.T, *[points[:,i] for i in range(x_dim)])[:, None] # [n_points, 1]
+            self.u0.append(equation(0, *[points[:,i] for i in range(x_dim)]))
             inputs.append(input)
             outputs.append(output)
      
@@ -105,8 +107,8 @@ class FFNTrainer(TrainerBase):
         self.dataset_generator = FFNDatasetGenerator(config.T, Equation, seed=self.config.seed, **equation_kwargs)
         self.model             = FFN(input_size=2+Equation.degree_of_freedom(**equation_kwargs), output_size=1, hidden_size=config.num_hidden, num_layers=config.num_layers, activation=config.activation)
    
-        self.weight_path       = f"weights/{config.equation}_{'_'.join([f'{k}={v}' for k,v in equation_kwargs.items()])}/ffn"
-        self.image_path        = f"images/{config.equation}_{'_'.join([f'{k}={v}' for k,v in equation_kwargs.items()])}/ffn"
+        self.weight_path       = f"weights/{config.equation}_{'_'.join([f'{k}={v}' for k,v in equation_kwargs.items()])}/spatial={self.config.n_train_spatial}/ffn"
+        self.image_path        = f"images/{config.equation}_{'_'.join([f'{k}={v}' for k,v in equation_kwargs.items()])}/spatial={self.config.n_train_spatial}/ffn"
        
     def eval(self):
         """
@@ -164,9 +166,8 @@ class FFNTrainer(TrainerBase):
             prediction = self.model(input)
         prediction = self.normalizer.unorm_output(prediction).cpu()
 
-        return points.cpu(), None, prediction.flatten(), output.flatten().cpu()
+        return points.cpu(), self.dataset_generator.u0[0], prediction.flatten(), output.flatten().cpu()
 
     def plot_prediction(self, n_eval_spatial):
         points, u0, prediction, uT = self.predict(n_eval_spatial)
-
         scatter_error2d(points[:,0], points[:,1], prediction, uT, self.image_path, self.xlims, u0=u0)
