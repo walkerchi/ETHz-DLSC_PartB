@@ -389,16 +389,19 @@ class TrainerBase:
             "L2 Error":errors.flatten()
         })
 
+        sns.set(font_scale=1.5)
         fig = sns.lmplot(x=key, y="L2 Error", hue="Spatial", col="Model", data=df, 
+                         col_wrap = 3,
                          scatter = False, 
                          y_jitter=.02, logistic=True, truncate=False)
+        fig.set( yscale="log")
         
         path = f"images/{self.config.equation}"
 
         os.makedirs(path, exist_ok=True)
         fig.savefig(os.path.join(path, f"varying.png"), dpi=300)
         fig.savefig(os.path.join(path, f"varying.pdf"), dpi=300)
-        plt.close(fig=fig)
+       
 
     def table_varying_together(self, predictions, outputs):
         errors = torch.stack([((x-y)**2).mean(-1) for x,y in zip(predictions, outputs)], 0).reshape(len(EQUATION_VALUES), len(SPATIAL_SAMPLINGS), len(MODELS), self.config.n_eval_sample) # [n_values, spatial, n_model, n_sample]
@@ -406,8 +409,8 @@ class TrainerBase:
         key    = EQUATION_KEY[self.config.equation]
         errors_mean = errors.mean(-1) # [n_values, spatial, n_model]
         errors_std  = errors.std(-1)  # [n_values, spatial, n_model]
-        errors_mean = errors_mean.transpose(0, 2, 1).reshape(len(EQUATION_VALUES), len(MODELS) * len(SPATIAL_SAMPLINGS)) # [n_values, n_model * spatial]
-        errors_std  = errors_std.transpose(0, 2, 1).reshape(len(EQUATION_VALUES),  len(MODELS) * len(SPATIAL_SAMPLINGS))  # [n_values, n_model * spatial]
+        errors_mean = errors_mean.permute(0, 2, 1).reshape(len(EQUATION_VALUES), len(MODELS) * len(SPATIAL_SAMPLINGS)).numpy() # [n_values, n_model * spatial]
+        errors_std  = errors_std.permute(0, 2, 1).reshape(len(EQUATION_VALUES),  len(MODELS) * len(SPATIAL_SAMPLINGS)).numpy()  # [n_values, n_model * spatial]
         data       = np.zeros_like(errors_mean, dtype=str)
         for i,(mean,std) in enumerate(zip(errors_mean.flat, errors_std.flat)):
             data.flat[i] = f"{mean:.2e} ($\pm$ {std:.2e})"
@@ -433,9 +436,10 @@ class TrainerBase:
         assert self.config.n_eval_spatial == error.shape[-1]
         mesh_axis = int(np.sqrt(self.config.n_eval_spatial))
         assert mesh_axis * mesh_axis == self.config.n_eval_spatial
+       
         prediction = prediction.reshape(nrow, len(MODELS), mesh_axis, mesh_axis) # [nrow, n_model, mesh_axis, mesh_axis]
-        u0         = u0.reshape(        nrow, len(MODELS), mesh_axis, mesh_axis) # [nrow, n_model, mesh_axis, mesh_axis]
-        uT         = uT.reshape(        nrow, len(MODELS), mesh_axis, mesh_axis) # [nrow, n_model, mesh_axis, mesh_axis]
+        u0         = u0.reshape(        nrow, mesh_axis, mesh_axis) # [nrow, mesh_axis, mesh_axis]
+        uT         = uT.reshape(        nrow, mesh_axis, mesh_axis) # [nrow, mesh_axis, mesh_axis]
         error      = error.reshape(     nrow, len(MODELS), mesh_axis, mesh_axis) # [nrow, n_model, mesh_axis, mesh_axis]
 
         nrow *= 2  # add error row
@@ -495,12 +499,11 @@ class TrainerBase:
             axes[0, icol+2].set_title(model, fontsize=18)
 
         # set row name
-        samplings = list(predictions.keys())
         for i,irow in enumerate(range(0, nrow, 2)):
             axes[irow, 0].axis('on')
             axes[irow, 0].set_xticks([])
             axes[irow, 0].set_yticks([])
-            axes[irow, 0].set_ylabel(f"spatial = {samplings[i]}", rotation=0, labelpad=70, fontsize=16)
+            axes[irow, 0].set_ylabel(f"spatial = {SPATIAL_SAMPLINGS[i]}", rotation=0, labelpad=90, fontsize=16)
       
         for i, irow in enumerate(range(1, nrow, 2)):
             axes[irow, 2].axis('on')
@@ -510,7 +513,7 @@ class TrainerBase:
 
         key  = EQUATION_KEY[self.config.equation]
         value= self.config[key]
-        path = f"images/{self.config.equation}_{key}={value}/spatial={self.config.n_train_spatial}"
+        path = f"images/{self.config.equation}_{key}={value}"
        
         os.makedirs(path, exist_ok=True)
         fig.savefig(os.path.join(path, f"predict.png"), dpi=300)
@@ -519,14 +522,15 @@ class TrainerBase:
         plt.close(fig=fig)
 
     def table_prediction_together(self, predictions,  uTs):
-        errors     = torch.stack([((x-y)**2).mean(-1) for x,y in zip(predictions, uTs)], 0) # [n_value, spatial_sampling, n_model]
-        errors     = errors.numpy().permute(0, 2, 1).reshape(len(EQUATION_VALUES), len(MODELS)*len(SPATIAL_SAMPLINGS)) # [n_value, n_model*spatial_sampling]
+        # val, n_saptialsampling, model,  n_spatial
+        errors     = torch.stack([((x-y)**2).mean(-1) for x,y in zip(predictions, uTs)], 0).reshape([len(EQUATION_VALUES), len(SPATIAL_SAMPLINGS), len(MODELS)]) # [n_value, spatial_sampling, n_model]
+        errors     = errors.permute(0, 2, 1).numpy().reshape(len(EQUATION_VALUES), len(MODELS)*len(SPATIAL_SAMPLINGS)) # [n_value, n_model*spatial_sampling]
         columns    = [(model, spatial_sampling) for model, spatial_sampling in product(MODELS, SPATIAL_SAMPLINGS)]
 
         df = pd.DataFrame(errors, columns=columns, index=EQUATION_VALUES)
         df.index.name = EQUATION_KEY[self.config.equation]
 
-        path = f"tables/{self.config.equation}/spatial={self.config.n_train_spatial}"
+        path = f"tables/{self.config.equation}"
         os.makedirs(path, exist_ok=True)
        
         df.to_latex(os.path.join(path, "predict.tex"), float_format="%.2e")

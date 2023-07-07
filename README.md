@@ -140,18 +140,6 @@ $$u(0, x, y, a) = \frac{\pi}{K^2} \sum_{i,j=1}^{K} a_{ij} \cdot (i^2 + j^2)^{-r}
 
 $$u(t, x, y, a) = \frac{\pi}{K^2} \sum_{i,j=1}^{K} a_{ij} \cdot (i^2 + j^2)^{-r} sin(\pi ix) sin(\pi jy) cos(c\pi t \sqrt{i^2 + j^2}), \forall x,y \in [0, 1]$$
 
-##### PDE Equation
-
-$$ u_{tt} - c^2 \Delta u = 0 (u_{tt} - c^2(u_{xx} + u_{yy})) \quad (x, y) \in [0, 1]^2, t \in [0, T], c = 0.1 $$   
-
-##### Initial Condition
-
-$$u(0, x, y, a) = \frac{\pi}{K^2} \sum_{i,j=1}^{K} a_{ij} \cdot (i^2 + j^2)^{-r} sin(\pi ix) sin(\pi jy) \quad \forall x,y \in [0, 1]$$
-
-##### Solution
-
-$$u(t, x, y, a) = \frac{\pi}{K^2} \sum_{i,j=1}^{K} a_{ij} \cdot (i^2 + j^2)^{-r} sin(\pi ix) sin(\pi jy) cos(c\pi t \sqrt{i^2 + j^2}), \forall x,y \in [0, 1]$$
-
 ### Poisson Equation
 
 ##### PDE Equation
@@ -265,6 +253,41 @@ $$
 - `run_plot.py`
   this will run all the predict and varying configuration under `config` folder
 
+
+## Result 
+
+### Heat Equation  
+
+$d=16$
+
+![img](images/readme/heat_predict_d=16.png)
+
+![img](images/readme/heat_varying.png)
+
+### Wave Equation
+
+$K=16$
+
+![img](images/readme/wave_predict_K=16.png)
+
+![img](images/readme/wave_varying.png)
+
+
+### Poisson Equation
+
+$K=16$ 
+
+![img](images/readme/poisson_predict_K=16.png)
+
+![img](images/readme/poisson_varying.png)
+
+
+### Wave Equation
+
+
+### Poisson Equation
+
+
 ## Discussion
 
 ### 20.06.2023
@@ -299,3 +322,13 @@ $$
    1. result part
    2. abstract, introduction and conclusion
    3. put some part to appendix (4 page at most)
+
+
+### 08.07.2023
+
+1. CNO bad result 
+   1. potential bug 
+   2. different setup from the paper
+2. two versions of overleaf project
+   1. first version finished
+   2. second version for varying spatial
