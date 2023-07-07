@@ -256,6 +256,26 @@ $$
 - `run_plot.py`
   this will run all the predict and varying configuration under `config` folder
 
+## Result
+
+### Heat Equation
+
+![img](images/readme/heat_predict.png)
+
+![img](images/readme/heat_varying.png)
+
+## Wave Equation
+
+![img](images/readme/wave_predict.png)
+
+![img](images/readme/wave_varying.png)
+
+## Poisson Equation
+
+![img](images/readme/poisson_predict.png)
+
+![img](images/readme/poisson_varying.png)
+
 ## Discussion
 
 ### 20.06.2023
