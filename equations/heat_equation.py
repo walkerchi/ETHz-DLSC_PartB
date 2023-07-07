@@ -23,8 +23,6 @@ class  HeatEquation:
 
     x_domain = np.array([[-1,1],[-1,1]],dtype=np.float32)
 
-    x_domain = np.array([[-1,1],[-1,1]],dtype=np.float32)
-
     def __init__(self, d):
         self.d = d 
         self.mu = uniform(-1, 1, size=(d,))
