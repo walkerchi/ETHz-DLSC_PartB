@@ -29,6 +29,7 @@ class FFNDatasetGenerator(DatasetGeneratorBase):
         """
         inputs = []
         outputs= []
+        u0s    = []
         points_sampler = SpatialSampler(self.Equation, sampler=sampler)
         
         x_dim = self.Equation.x_domain.shape[0]
@@ -38,9 +39,12 @@ class FFNDatasetGenerator(DatasetGeneratorBase):
             equation = self.Equation(**self.kwargs)
             input    = torch.cat([points, equation.variable.flatten()[None,:].tile(points.shape[0],1)], -1) #[n_points, 2 + d]
             output   = equation(self.T, *[points[:,i] for i in range(x_dim)])[:, None] # [n_points, 1]
+            u0       = equation(0, *[points[:,i] for i in range(x_dim)]) # [n_points]
+            u0s.append(u0)
             inputs.append(input)
             outputs.append(output)
      
+        self.u0s = torch.stack(u0s, dim=0) # [n_samples * n_points]
         inputs  = torch.cat(inputs, dim=0)  # [n_samples * n_points, 2+d]
         outputs = torch.cat(outputs, dim=0) # [n_samples * n_points, 1]
        
@@ -164,7 +168,7 @@ class FFNTrainer(TrainerBase):
             prediction = self.model(input)
         prediction = self.normalizer.unorm_output(prediction).cpu()
 
-        return points.cpu(), None, prediction.flatten(), output.flatten().cpu()
+        return points.cpu(), self.dataset_generator.u0s.flatten(), prediction.flatten(), output.flatten().cpu()
 
     def plot_prediction(self, n_eval_spatial):
         points, u0, prediction, uT = self.predict(n_eval_spatial)
