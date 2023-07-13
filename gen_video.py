@@ -3,6 +3,7 @@
 """
 import os
 import torch
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt 
 from matplotlib import animation
@@ -11,8 +12,9 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tqdm import tqdm
 from itertools import product
 
+
 from equations import HeatEquation, WaveEquation, EquationLookUp
-from config import EQUATION_KEYS, EQUATION_VALUES, EQUATIONS
+from config import EQUATION_KEY, EQUATION_VALUES, EQUATIONS
 
 EQUATION_TIME = {
     "heat": 0.02,
@@ -20,7 +22,7 @@ EQUATION_TIME = {
     "poisson": 1 # it doesn't matter, should be none zero
 }
 
-def generate_video(spatial_resolution = 64 * 64, time_resolution = 100):
+def generate_video(spatial_resolution = 64 * 64, time_resolution = 100, use_gif=False):
     total = len(EQUATIONS) * len(EQUATION_VALUES)
     for i,(equation, v) in enumerate(product(EQUATIONS,EQUATION_VALUES)):
         print(f"\nmaking video {i+1}/{total}")
@@ -31,7 +33,7 @@ def generate_video(spatial_resolution = 64 * 64, time_resolution = 100):
             torch.linspace(-1, 1, int(np.sqrt(spatial_resolution))),
             torch.linspace(-1, 1, int(np.sqrt(spatial_resolution)))
         )
-        k = EQUATION_KEYS[equation]
+        k = EQUATION_KEY[equation]
         if equation == "poisson":
             # not dependent on time
             fig, ax = plt.subplots(ncols=2, figsize=(12,6))
@@ -60,12 +62,15 @@ def generate_video(spatial_resolution = 64 * 64, time_resolution = 100):
             
             anim = FuncAnimation(fig, animate, frames=tqdm(range(time_resolution), desc="Frame"), interval=100, blit=True)
             os.makedirs(f"videos", exist_ok=True)
-            appendix = "mp4" if 'ffmpeg' in animation.writers.list() else 'gif'
+            appendix = "mp4" if 'ffmpeg' in animation.writers.list() and not use_gif else 'gif'
             anim.save(f"videos/{equation}_{k}={v}.{appendix}")
         plt.close(fig=fig)
 
 if __name__ == '__main__':
-    generate_video()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-gif", "--use_gif", action="store_true", help="whether generate video using gif, default is mp4")
+    args = parser.parse_args()
+    generate_video(use_gif=args.use_gif)
     
 
 
