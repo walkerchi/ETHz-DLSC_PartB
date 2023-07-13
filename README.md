@@ -81,11 +81,13 @@ $$
 $$
 
 We have the theoretical congruity and practical approximation
+
 $$ 
 g(x,y,\mu) = \mathcal G(u_0)(x,y) 
 $$
 
 and for each component
+
 $$ 
 g(x,y,\mu^{(j)}) = \mathcal G(u_0^{(j)})(x,y) 
 $$
@@ -103,7 +105,9 @@ u(t,x_1,x_2) = \Delta u
 $$
 
 where 
-$$ t \in [0,T],\quad(x_1,x_2)\in  [-1,1]^2
+
+$$
+t \in [0,T],\quad(x_1,x_2)\in  [-1,1]^2
 $$
 
 $$
